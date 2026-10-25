@@ -67,3 +67,9 @@ A machine-readable provenance metadata envelope (`manifest.json`) stored in each
 ### Stage Artifact
 A versioned intermediate or final dataset produced by an individual pipeline stage, named using ordered stage prefixes (`00_preprocessed.json`, `01_extracted.json`, `02_resolved.json`, `03_graph.ttl`, `04_shacl_report.json`).
 
+### Review Queue
+A staged artifact (`02_review_queue.json`) containing unlinked, ambiguous, or low-confidence entity resolutions flagged for domain expert human curation.
+
+### Curated Gazetteer
+A project gazetteer (`curated-links.csv`) capturing approved entity resolutions confirmed by human curators to compound institutional knowledge across future pipeline runs.
+
