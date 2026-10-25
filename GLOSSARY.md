@@ -57,3 +57,13 @@ Intangible and active ritual expressions tied to physical structures, including 
 
 ### Quality Gate (SHACL)
 The final validation phase ensuring that generated Turtle files (`graph.ttl`) strictly conform to [HeritageGraph.shacl.ttl](schemas/HeritageGraph.shacl.ttl).
+
+### Pipeline Run
+An isolated, deterministic, end-to-end transformation execution on a raw cultural heritage dataset, scoped inside a dedicated run directory (`runs/<run_id>/`).
+
+### Run Manifest
+A machine-readable provenance metadata envelope (`manifest.json`) stored in each run directory, recording source file checksums, tool signatures, LinkML schema versions, stage execution timestamps, and entity validation metrics.
+
+### Stage Artifact
+A versioned intermediate or final dataset produced by an individual pipeline stage, named using ordered stage prefixes (`00_preprocessed.json`, `01_extracted.json`, `02_resolved.json`, `03_graph.ttl`, `04_shacl_report.json`).
+

@@ -12,13 +12,16 @@ Orchestrate the end-to-end transformation of cultural heritage data into a valid
 
 ```mermaid
 flowchart LR
-    RawData["Raw Heritage Data<br/>(PDF Reports / CSV / JSON / Text)"] --> Stage1["1. Ingest & Extract<br/><i>(01_heritage-extract)</i>"]
-    Stage1 -->|"extracted.json (LinkML Container)"| Stage2["2. Entity Resolution<br/><i>(02_heritage-entity-resolution)</i>"]
-    Stage2 -->|"resolved.json"| Stage3["3. Deterministic Mapper<br/><i>(03_heritage-rdf-mapper)</i>"]
-    Stage3 -->|"graph.ttl"| Stage4["4. SHACL Validation<br/><i>(04_heritage-shacl-validate)</i>"]
+    RawData["Raw Heritage Data<br/>(PDF Reports / CSV / JSON / Text)"] --> Stage0["0. Ingest & Preprocess<br/><i>(00_preprocessed.json)</i>"]
+    Stage0 --> Stage1["1. Extract & Structure<br/><i>(01_extracted.json)</i>"]
+    Stage1 --> Stage2["2. Entity Resolution<br/><i>(02_resolved.json)</i>"]
+    Stage2 --> Stage3["3. Deterministic Mapper<br/><i>(03_graph.ttl)</i>"]
+    Stage3 --> Stage4["4. SHACL Validation<br/><i>(04_shacl_report.json)</i>"]
     Stage4 -->|CONFORMS| Output["Validated RDF Graph<br/>(HeritageGraph Platform)"]
     Stage4 -.->|Violations| Stage1
 ```
+
+All pipeline artifacts are scoped within an isolated run workspace: `runs/<run_id>/` (e.g., `runs/2026-10-25_idjmss-patan/`), accompanied by an authoritative provenance envelope (`manifest.json`).
 
 ## Supported Inputs
 - Multi-page PDF survey reports & books (with OCR text normalization & page chunking)
@@ -26,40 +29,48 @@ flowchart LR
 - Museum and archival catalog dumps (JSON)
 - Unstructured field notes, transcripts, and inscriptions
 
-## Pipeline Steps
+## Pipeline Steps & Stage Artifacts
 
-### 1. Ingestion & Configuration
-- Prompt user for raw data path (local filesystem path or downloadable URL).
-- Confirm the target ontology and version (default: `cidoc-crm`).
-- **Always work on copies** in a working scratch directory; never mutate user originals.
+### 1. Ingestion & Preprocessing (Stage 0)
+- Ingest raw document:
+  ```bash
+  python skills/01_heritage-extract/scripts/ingest_raw.py <input-path> [--run-dir runs/<run_id>]
+  ```
+- Output: `00_preprocessed.json` and initialized `manifest.json`.
 
-### 2. Extract & Structure
+### 2. Extract & Structure (Stage 1)
 - Follow [01_heritage-extract](../01_heritage-extract/SKILL.md).
-- Output: `extracted.json`.
-- **Completion Gate**: Run `python ../01_heritage-extract/scripts/validate_extraction.py extracted.json`. Do not proceed until validation passes.
+- Output: `01_extracted.json`.
+- **Completion Gate**: Run `python skills/01_heritage-extract/scripts/validate_extraction.py --run-dir runs/<run_id>`. Do not proceed until validation passes.
 
-### 3. Entity Resolution
+### 3. Entity Resolution (Stage 2)
 - Follow [02_heritage-entity-resolution](../02_heritage-entity-resolution/SKILL.md).
-- Output: `resolved.json`.
+- Run:
+  ```bash
+  python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id>
+  ```
+- Output: `02_resolved.json`.
 - **Completion Gate**: Each record must carry a URI, confidence score, and source. If no confident match exists, mint a local URI (never hallucinate a foreign link).
 
-### 4. Deterministic RDF Mapping
+### 4. Deterministic RDF Mapping (Stage 3)
 - Follow [03_heritage-rdf-mapper](../03_heritage-rdf-mapper/SKILL.md).
 - Run:
   ```bash
-  python ../03_heritage-rdf-mapper/scripts/map_to_rdf.py resolved.json --ontology <ontology> --out graph.ttl
+  python skills/03_heritage-rdf-mapper/scripts/map_to_rdf.py --run-dir runs/<run_id> [--mapping <file>]
   ```
-- **Completion Gate**: `graph.ttl` is generated with valid RDF syntax.
+- Output: `03_graph.ttl`.
+- **Completion Gate**: Valid RDF syntax verified and triple count recorded in `manifest.json`.
 
-### 5. SHACL Quality Gate
+### 5. SHACL Quality Gate (Stage 4)
 - Follow [04_heritage-shacl-validate](../04_heritage-shacl-validate/SKILL.md).
 - Run:
   ```bash
-  python ../04_heritage-shacl-validate/scripts/validate.py graph.ttl --ontology <ontology>
+  python skills/04_heritage-shacl-validate/scripts/validate.py --run-dir runs/<run_id>
   ```
-- **Completion Gate**: If validation fails, report violations plainly (record + constraint) and remediate upstream in stage 2 or 3. Never edit shapes to force a pass.
+- Output: `04_shacl_report.json`.
+- **Completion Gate**: If validation fails, report violations plainly (record + constraint) and remediate upstream. Never edit shapes to force a pass.
 
-*(Note: Once Stages 1 and 2 are complete, Stages 4 and 5 can also be run sequentially via `python scripts/run_pipeline.py resolved.json`)*.
+*(Note: Once Stage 1 extraction is serialized, Stages 2 through 4 can be orchestrated in one command via `python skills/00_heritage-to-rdf/scripts/run_pipeline.py --run-dir runs/<run_id>`)*.
 
 ## Deliverables
 Report `graph.ttl` with:

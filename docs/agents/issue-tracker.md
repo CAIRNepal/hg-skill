@@ -4,11 +4,12 @@ Issues and specs for this repo live as GitHub issues on [CAIRNepal/hg-skill](htt
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
+- **Create an issue**: Always write multi-line markdown to a file and pass `--body-file <path>`: `gh issue create --title "..." --body-file <path>`. **CRITICAL on Windows/PowerShell**: Never pass markdown containing backtick code spans inside double-quoted PowerShell here-strings (`@"..."@`)—PowerShell treats backticks (`` ` ``) as escape sequences (e.g. `` `r `` becomes carriage return `\r` eating characters, and `` `0 `` becomes null). When using files with `--body-file` or single-quoted `@'...'@`, markdown code blocks and inline backticks remain 100% verbatim.
+- **Edit an issue body**: `gh issue edit <number> --body-file <path>`.
 - **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Make an issue a sub-issue of a parent**: `gh issue create --parent <parent> ...`, or `gh issue edit <parent> --add-sub-issue <child>` afterwards (`gh` 2.94+). Older `gh`: `gh api --method POST repos/<owner>/<repo>/issues/<parent>/sub_issues -F sub_issue_id=<child-db-id>` (database id, as in **Blocking** below). Without sub-issues, put `Part of #<parent>` at the top of the child body.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
+- **Comment on an issue**: `gh issue comment <number> --body-file <path>` (or `--body "..."` for simple one-liners).
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 

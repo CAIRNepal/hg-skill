@@ -13,14 +13,22 @@ import json
 import sys
 from pathlib import Path
 
-# Ensure local script directory is on sys.path
+# Ensure local script directory and common skills directory are on sys.path
 SCRIPTS_DIR = Path(__file__).resolve().parent
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+COMMON_DIR = REPO_ROOT / "skills" / "common"
+for d in (SCRIPTS_DIR, COMMON_DIR):
+    if str(d) not in sys.path:
+        sys.path.insert(0, str(d))
 
 from ingest_tabular import ingest_csv, ingest_excel, ingest_json
 from ingest_pdf import ingest_pdf
 from recognize_heritage import scan_text_for_heritage_entities
+
+try:
+    from run_workspace import RunWorkspace
+except ImportError:
+    RunWorkspace = None
 
 
 def _extract_all_text(rec: dict) -> str:
@@ -124,12 +132,27 @@ def main():
     ap = argparse.ArgumentParser(description="Ingest and preprocess raw cultural heritage materials.")
     ap.add_argument("input_file", help="Path to raw input file (.pdf, .csv, .tsv, .xlsx, .json)")
     ap.add_argument("--out", default=None, help="Path to write preprocessed JSON payload")
+    ap.add_argument("--run-dir", default=None, help="Path to pipeline run directory (auto-created if omitted and --out not set)")
     ap.add_argument("--chunk-size", type=int, default=800, help="Max words per chunk for PDF files")
     args = ap.parse_args()
+
+    # Determine if RunWorkspace should be used
+    ws = None
+    target_out = None
+    if args.run_dir or (not args.out and RunWorkspace is not None):
+        ws = RunWorkspace.init(args.input_file, run_dir=args.run_dir)
+        target_out = ws.artifact_path(0)
+    elif args.out:
+        target_out = Path(args.out)
+
+    if ws:
+        ws.record_stage_start(0, "ingest", {"command": "ingest_raw.py", "input_file": str(args.input_file)})
 
     try:
         payload = process_raw_file(Path(args.input_file), max_words_per_chunk=args.chunk_size)
     except Exception as e:
+        if ws:
+            ws.record_stage_finish(0, "ingest", status="failed", error=str(e))
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -148,10 +171,15 @@ def main():
     )
 
     serialized = json.dumps(payload, indent=2, ensure_ascii=False)
-    if args.out:
-        Path(args.out).write_text(serialized, encoding="utf-8")
+
+    if target_out:
+        target_out.parent.mkdir(parents=True, exist_ok=True)
+        target_out.write_text(serialized, encoding="utf-8")
+        if ws:
+            ws.record_stage_finish(0, "ingest", status="success", metrics=summ)
+            print(f"Pipeline run directory: {ws.run_dir}")
         print(summary_msg)
-        print(f"Output saved to: {args.out}")
+        print(f"Output saved to: {target_out}")
     else:
         print(summary_msg)
         try:
