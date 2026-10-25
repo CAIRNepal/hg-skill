@@ -14,18 +14,10 @@ import openpyxl
 
 NULL_STRINGS = {"", "null", "none", "n/a", "na", "undefined", "unknown", "-", "--"}
 
-STRUCTURED_KEYWORDS = {
-    "id", "identifier", "code", "uri", "ref", "accession",
-    "lat", "latitude", "lon", "long", "longitude", "coord", "coordinates", "elevation",
-    "district", "municipality", "ward", "zone", "province", "vdc", "tole",
-    "type", "category", "heritage_type", "monument_type", "style",
-    "status", "condition", "ownership", "date", "year", "century", "era", "epoch",
-    "religion", "tradition", "caste", "guthi_type"
-}
-
 NARRATIVE_KEYWORDS = {
     "desc", "description", "history", "historical", "narrative", "note", "notes",
-    "inscription", "text", "transcription", "ritual", "rituals", "summary", "detail", "details"
+    "inscription", "inscriptions", "text", "transcription", "ritual", "rituals",
+    "summary", "detail", "details", "oral_history", "legend", "mythology"
 }
 
 
@@ -46,19 +38,17 @@ def clean_record(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def categorize_fields(fields: List[str]) -> Tuple[Set[str], Set[str]]:
-    """Partition fields into (structured_fields, narrative_fields)."""
+    """Partition fields into (structured_fields, narrative_fields) using token matching."""
     structured = set()
     narrative = set()
 
     for f in fields:
         f_norm = f.lower().replace("-", "_").replace(" ", "_")
-        # Check narrative first
-        if any(nk in f_norm for nk in NARRATIVE_KEYWORDS):
+        tokens = set(filter(None, f_norm.split("_")))
+
+        if tokens & NARRATIVE_KEYWORDS:
             narrative.add(f)
-        elif any(sk in f_norm for sk in STRUCTURED_KEYWORDS):
-            structured.add(f)
         else:
-            # Default to structured for short column names, narrative for long text fields
             structured.add(f)
 
     return structured, narrative
@@ -99,21 +89,31 @@ def partition_record(rec: Dict[str, Any], structured_fields: Set[str], narrative
 
 
 def ingest_csv(file_path: Path, delimiter: str = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """Ingest CSV or TSV file into partitioned records."""
+    """Ingest CSV or TSV file into partitioned records with encoding fallback."""
     p = Path(file_path)
     if delimiter is None:
         delimiter = "\t" if p.suffix.lower() == ".tsv" else ","
 
     records = []
-    with open(p, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f, delimiter=delimiter)
-        fields = reader.fieldnames or []
-        structured_fields, narrative_fields = categorize_fields(fields)
+    fields = []
+    used_encoding = "utf-8"
 
-        for row in reader:
-            cleaned = clean_record(row)
-            if cleaned:
-                records.append(partition_record(cleaned, structured_fields, narrative_fields))
+    for enc in ("utf-8-sig", "utf-8", "latin-1"):
+        try:
+            with open(p, "r", encoding=enc, newline="") as f:
+                reader = csv.DictReader(f, delimiter=delimiter)
+                fields = reader.fieldnames or []
+                structured_fields, narrative_fields = categorize_fields(fields)
+                temp_records = []
+                for row in reader:
+                    cleaned = clean_record(row)
+                    if cleaned:
+                        temp_records.append(partition_record(cleaned, structured_fields, narrative_fields))
+                records = temp_records
+                used_encoding = enc
+                break
+        except UnicodeDecodeError:
+            continue
 
     metadata = {
         "source_file": str(p.name),

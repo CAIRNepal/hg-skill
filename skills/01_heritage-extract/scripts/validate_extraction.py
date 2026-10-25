@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Validate stage-1 output against extraction.schema.json plus semantic checks.
+"""Validate stage-1 output against extraction.schema.json plus semantic referential checks.
 
-Supports both LinkML Container structures (collections of heritage entities)
-and legacy record-list structures.
+Derived directly from the LinkML Container schema definition:
+- Validates structural conformity using Draft202012Validator.
+- Dynamically discovers all Container collections from the schema properties.
+- Checks unique entity CURIEs (enforcing canonical 'heritageGraph:' prefix).
+- Verifies referential integrity across single and multi-valued entity links.
 
 Usage: validate_extraction.py extracted.json [--schema PATH]
 Exit code 0 = valid, 1 = errors found.
@@ -11,29 +14,27 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, Dict, Iterator, List, Set, Tuple
 
 from jsonschema import Draft202012Validator
 
 DEFAULT_SCHEMA = Path(__file__).resolve().parent.parent / "assets" / "extraction.schema.json"
 
-COLLECTION_NAMES = [
-    "structures", "architectural_elements", "human_made_objects", "iconographic_objects",
-    "places", "persons", "actors", "guthis", "festivals", "ritual_events",
-    "production_events", "consecration_events", "enshrinement_events",
-    "custody_events", "historical_events", "kumari_lifecycle_events",
-    "kumari_roles", "kumari_tenures", "deities", "caste_groups", "assertions",
-    "materials", "techniques", "time_spans", "data_custodians", "data_sources"
-]
+
+def get_schema_collections(schema: Dict[str, Any]) -> List[str]:
+    """Dynamically discover collection slot names from Container schema properties."""
+    collections = []
+    for prop_name, prop_spec in schema.get("properties", {}).items():
+        if isinstance(prop_spec, dict):
+            ptype = prop_spec.get("type", [])
+            if "array" in ptype or ptype == "array":
+                collections.append(prop_name)
+    return sorted(collections)
 
 
-def extract_entities(data):
-    """Yield (collection_name, index, entity_dict) across all collections."""
-    if "records" in data and isinstance(data["records"], list):
-        for i, rec in enumerate(data["records"]):
-            yield "records", i, rec
-        return
-
-    for col in COLLECTION_NAMES:
+def extract_entities(data: Dict[str, Any], collection_names: List[str]) -> Iterator[Tuple[str, int, Dict[str, Any]]]:
+    """Yield (collection_name, index, entity_dict) across all declared collections."""
+    for col in collection_names:
         items = data.get(col)
         if isinstance(items, list):
             for i, item in enumerate(items):
@@ -41,50 +42,62 @@ def extract_entities(data):
                     yield col, i, item
 
 
-def semantic_errors(data):
+def semantic_errors(data: Dict[str, Any], collection_names: List[str]) -> List[str]:
+    """Perform semantic integrity checks: ID uniqueness, prefix validity, and referential links."""
     errs = []
-    seen_ids = set()
-    all_declared_ids = set()
+    seen_ids: Set[str] = set()
+    all_declared_ids: Set[str] = set()
 
-    # Pass 1: Collect all declared entity IDs
-    for col, idx, ent in extract_entities(data):
+    # Pass 1: Collect and validate all declared entity IDs
+    for col, idx, ent in extract_entities(data, collection_names):
         eid = ent.get("id")
-        if eid:
-            if eid in seen_ids:
-                errs.append(f"{col}[{idx}]: duplicate id '{eid}'")
-            seen_ids.add(eid)
-            all_declared_ids.add(eid)
+        if not eid:
+            errs.append(f"{col}[{idx}]: entity missing required 'id'")
+            continue
 
-    # Pass 2: Semantic validations
-    for col, idx, ent in extract_entities(data):
+        if not str(eid).startswith("heritageGraph:"):
+            errs.append(
+                f"{col}[{idx}] ({eid}): non-canonical CURIE prefix; "
+                "must use authoritative 'heritageGraph:' prefix"
+            )
+
+        if eid in seen_ids:
+            errs.append(f"{col}[{idx}]: duplicate id '{eid}'")
+        seen_ids.add(eid)
+        all_declared_ids.add(eid)
+
+    # Pass 2: Semantic validations across primary entities and references
+    for col, idx, ent in extract_entities(data, collection_names):
         eid = ent.get("id", f"#{idx}")
-        # Primary entities should have a name or note/description
+
+        # Primary physical & living entities should have a label, name, or note
         if col in ("structures", "human_made_objects", "iconographic_objects", "places", "guthis", "festivals"):
-            has_name = bool(str(ent.get("name", "")).strip())
+            has_name = bool(str(ent.get("name", "") or ent.get("label", "")).strip())
             has_note = bool(str(ent.get("note", "") or ent.get("description", "")).strip())
             if not has_name and not has_note:
-                errs.append(f"{col}[{idx}] ({eid}): entity missing both 'name' and 'note/description'")
+                errs.append(f"{col}[{idx}] ({eid}): entity missing both 'name/label' and 'note/description'")
 
-        # Referential integrity checks for known reference fields
-        ref_fields = [
+        # Referential integrity checks for known single-reference fields
+        single_ref_fields = [
             "has_current_location", "hypothesized_location", "was_produced_by_event",
-            "destruction_event", "was_documented_by"
+            "destruction_event", "was_documented_by", "enshrined_deity", "enshrined_in_structure"
         ]
-        for f in ref_fields:
+        for f in single_ref_fields:
             target = ent.get(f)
             if target and isinstance(target, str):
-                # If target looks like a local CURIE or ID within this container, verify it exists
-                if target.startswith("heritageGraph:") or target.startswith("hg:"):
+                if target.startswith("heritageGraph:"):
                     if target not in all_declared_ids:
                         errs.append(f"{col}[{idx}] ({eid}): reference '{f}' points to undeclared entity '{target}'")
 
-        # Multi-value reference checks
-        multi_ref_fields = ["managed_by_guthi", "participates_in_ritual", "has_component", "has_assertion"]
+        # Referential integrity checks for multi-reference fields
+        multi_ref_fields = [
+            "managed_by_guthi", "participates_in_ritual", "has_component", "has_assertion"
+        ]
         for mf in multi_ref_fields:
             targets = ent.get(mf, [])
             if isinstance(targets, list):
                 for target in targets:
-                    if isinstance(target, str) and (target.startswith("heritageGraph:") or target.startswith("hg:")):
+                    if isinstance(target, str) and target.startswith("heritageGraph:"):
                         if target not in all_declared_ids:
                             errs.append(f"{col}[{idx}] ({eid}): reference '{mf}' contains undeclared entity '{target}'")
 
@@ -105,7 +118,9 @@ def main():
         f"{'/'.join(map(str, e.absolute_path)) or '<root>'}: {e.message}"
         for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
     ]
-    sem_errors = semantic_errors(data)
+
+    collections = get_schema_collections(schema)
+    sem_errors = semantic_errors(data, collections)
     all_errors = schema_errors + sem_errors
 
     if all_errors:
@@ -114,7 +129,7 @@ def main():
             print(f"  - {e}")
         return 1
 
-    entity_count = sum(1 for _ in extract_entities(data))
+    entity_count = sum(1 for _ in extract_entities(data, collections))
     print(f"OK: {entity_count} entity/record(s) valid")
     return 0
 

@@ -13,15 +13,33 @@ import json
 import sys
 from pathlib import Path
 
-# Relative imports or local scripts directory
-try:
-    from ingest_tabular import ingest_csv, ingest_excel, ingest_json
-    from ingest_pdf import ingest_pdf
-    from recognize_heritage import scan_text_for_heritage_entities
-except ImportError:
-    from skills._01_heritage_extract.scripts.ingest_tabular import ingest_csv, ingest_excel, ingest_json
-    from skills._01_heritage_extract.scripts.ingest_pdf import ingest_pdf
-    from skills._01_heritage_extract.scripts.recognize_heritage import scan_text_for_heritage_entities
+# Ensure local script directory is on sys.path
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from ingest_tabular import ingest_csv, ingest_excel, ingest_json
+from ingest_pdf import ingest_pdf
+from recognize_heritage import scan_text_for_heritage_entities
+
+
+def _extract_all_text(rec: dict) -> str:
+    """Extract unique text content from structured and narrative fields for heritage tagging."""
+    parts = []
+    seen = set()
+    for container in (rec.get("structured", {}), rec.get("narrative", {})):
+        for v in container.values():
+            if isinstance(v, str):
+                s = v.strip()
+                if s and s not in seen:
+                    parts.append(s)
+                    seen.add(s)
+    if "name" in rec and rec["name"]:
+        name_str = str(rec["name"]).strip()
+        if name_str not in seen:
+            parts.append(name_str)
+            seen.add(name_str)
+    return " ".join(parts)
 
 
 def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
@@ -39,6 +57,7 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
             "format": "pdf",
             "page_count": raw_result["page_count"],
             "is_scanned_image_only": raw_result["is_scanned_image_only"],
+            "scanned_pages": raw_result.get("scanned_pages", []),
             "diagnostic_warning": raw_result.get("diagnostic_warning")
         }
         items = []
@@ -46,33 +65,26 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
             tags = scan_text_for_heritage_entities(ch["text"])
             items.append({
                 "chunk_id": ch["chunk_id"],
+                "start_page": ch.get("start_page"),
+                "end_page": ch.get("end_page"),
+                "page_range": ch.get("page_range"),
                 "text": ch["text"],
                 "word_count": ch["word_count"],
                 "heritage_tags": tags
             })
 
-    elif suffix in (".csv", ".tsv"):
-        records, metadata = ingest_csv(p)
-        items = []
-        for rec in records:
-            narrative_text = " ".join(str(v) for v in rec.get("narrative", {}).values())
-            tags = scan_text_for_heritage_entities(narrative_text)
-            items.append({**rec, "heritage_tags": tags})
+    elif suffix in (".csv", ".tsv", ".xlsx", ".json"):
+        if suffix in (".csv", ".tsv"):
+            records, metadata = ingest_csv(p)
+        elif suffix == ".xlsx":
+            records, metadata = ingest_excel(p)
+        else:
+            records, metadata = ingest_json(p)
 
-    elif suffix == ".xlsx":
-        records, metadata = ingest_excel(p)
         items = []
         for rec in records:
-            narrative_text = " ".join(str(v) for v in rec.get("narrative", {}).values())
-            tags = scan_text_for_heritage_entities(narrative_text)
-            items.append({**rec, "heritage_tags": tags})
-
-    elif suffix == ".json":
-        records, metadata = ingest_json(p)
-        items = []
-        for rec in records:
-            narrative_text = " ".join(str(v) for v in rec.get("narrative", {}).values())
-            tags = scan_text_for_heritage_entities(narrative_text)
+            combined_text = _extract_all_text(rec)
+            tags = scan_text_for_heritage_entities(combined_text)
             items.append({**rec, "heritage_tags": tags})
 
     else:
@@ -82,6 +94,7 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
     total_guthis = sum(len(it.get("heritage_tags", {}).get("guthis", [])) for it in items)
     total_styles = sum(len(it.get("heritage_tags", {}).get("architectural_styles", [])) for it in items)
     total_dates = sum(len(it.get("heritage_tags", {}).get("dates", [])) for it in items)
+    total_eras = sum(len(it.get("heritage_tags", {}).get("eras", [])) for it in items)
     total_traditions = sum(len(it.get("heritage_tags", {}).get("traditions", [])) for it in items)
 
     summary = {
@@ -89,6 +102,7 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
         "discovered_guthis": total_guthis,
         "discovered_architectural_styles": total_styles,
         "discovered_calendar_dates": total_dates,
+        "discovered_eras": total_eras,
         "discovered_traditions": total_traditions
     }
 
@@ -100,29 +114,51 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
 
 
 def main():
+    # Configure UTF-8 stdout if supported by the console stream
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
     ap = argparse.ArgumentParser(description="Ingest and preprocess raw cultural heritage materials.")
     ap.add_argument("input_file", help="Path to raw input file (.pdf, .csv, .tsv, .xlsx, .json)")
     ap.add_argument("--out", default=None, help="Path to write preprocessed JSON payload")
     ap.add_argument("--chunk-size", type=int, default=800, help="Max words per chunk for PDF files")
     args = ap.parse_args()
 
-    payload = process_raw_file(Path(args.input_file), max_words_per_chunk=args.chunk_size)
+    try:
+        payload = process_raw_file(Path(args.input_file), max_words_per_chunk=args.chunk_size)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
 
     meta = payload["metadata"]
     summ = payload["summary"]
 
-    print(f"Ingested '{meta['source_file']}' ({meta['format']}): {summ['total_items']} item(s)/chunk(s)")
+    summary_msg = (
+        f"Ingested '{meta['source_file']}' ({meta['format']}): {summ['total_items']} item(s)/chunk(s)\n"
+    )
     if meta.get("diagnostic_warning"):
-        print(f"WARNING: {meta['diagnostic_warning']}")
-    print(f"Living heritage candidate tags: {summ['discovered_guthis']} Guthi(s), "
-          f"{summ['discovered_architectural_styles']} style(s), {summ['discovered_calendar_dates']} date(s).")
+        summary_msg += f"WARNING: {meta['diagnostic_warning']}\n"
+    summary_msg += (
+        f"Living heritage candidate tags: {summ['discovered_guthis']} Guthi(s), "
+        f"{summ['discovered_architectural_styles']} style(s), {summ['discovered_calendar_dates']} date(s), "
+        f"{summ['discovered_eras']} era(s), {summ['discovered_traditions']} tradition(s)."
+    )
 
     serialized = json.dumps(payload, indent=2, ensure_ascii=False)
     if args.out:
         Path(args.out).write_text(serialized, encoding="utf-8")
+        print(summary_msg)
         print(f"Output saved to: {args.out}")
     else:
-        print(serialized)
+        print(summary_msg)
+        try:
+            print(serialized)
+        except UnicodeEncodeError:
+            sys.stdout.buffer.write(serialized.encode("utf-8"))
+            sys.stdout.buffer.write(b"\n")
 
     return 0
 

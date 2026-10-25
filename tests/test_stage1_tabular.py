@@ -36,14 +36,26 @@ def test_clean_record():
 
 
 def test_categorize_fields():
-    fields = ["id", "monument_name", "latitude", "longitude", "description_en", "history_text", "district"]
+    fields = ["id", "monument_name", "latitude", "longitude", "description_en", "history_text", "district", "descendants"]
     structured, narrative = categorize_fields(fields)
     assert "id" in structured
     assert "latitude" in structured
     assert "longitude" in structured
     assert "district" in structured
+    assert "descendants" in structured
     assert "description_en" in narrative
     assert "history_text" in narrative
+
+
+def test_ingest_csv_latin1(tmp_path):
+    csv_file = tmp_path / "latin1.csv"
+    with open(csv_file, "wb") as f:
+        f.write("id,name,description\nm1,Café,Ancient site\n".encode("latin-1"))
+
+    records, metadata = ingest_csv(csv_file)
+    assert len(records) == 1
+    assert records[0]["structured"]["name"] == "Café"
+
 
 
 def test_ingest_csv(tmp_path):
