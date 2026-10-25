@@ -75,9 +75,9 @@ The transformation pipeline is organized under [`skills/`](skills/):
 |---|---|---|---|---|
 | **00** | [00_heritage-to-rdf](skills/00_heritage-to-rdf/SKILL.md) | All | End-to-end pipeline orchestrator managing stages 1 through 4. | `graph.ttl` |
 | **01** | [01_heritage-extract](skills/01_heritage-extract/SKILL.md) | **PDF**, **CSV**, **TSV**, **XLSX**, **JSON**, raw text | Ingests multi-page PDFs (with OCR line-repair), tabular sheets, and raw texts; scans living heritage; structures into LinkML `Container`. | `extracted.json` |
-| **02** | [02_heritage-entity-resolution](skills/02_heritage-entity-resolution/SKILL.md) | `extracted.json` | Entity grounding and disambiguation via gazetteers, Getty (AAT, ULAN), and Wikidata. | `resolved.json` |
-| **03** | [03_heritage-rdf-mapper](skills/03_heritage-rdf-mapper/SKILL.md) | `resolved.json` | Deterministic triplification into RDF Turtle using declarative CIDOC-CRM / HeritageGraph mappings. | `graph.ttl` |
-| **04** | [04_heritage-shacl-validate](skills/04_heritage-shacl-validate/SKILL.md) | `graph.ttl` | Semantic and structural quality gate validating graphs with pySHACL against `HeritageGraph.shacl.ttl`. | `validation-report.json` |
+| **02** | [02_heritage-entity-resolution](skills/02_heritage-entity-resolution/SKILL.md) | `01_extracted.json` | Entity grounding via gazetteers, Getty (AAT/ULAN), and Wikidata, with interactive HITL review queue. | `02_resolved.json`, `02_review_queue.json` |
+| **03** | [03_heritage-rdf-mapper](skills/03_heritage-rdf-mapper/SKILL.md) | `02_resolved.json` | Deterministic triplification into RDF Turtle using declarative CIDOC-CRM / HeritageGraph mappings. | `03_graph.ttl` |
+| **04** | [04_heritage-shacl-validate](skills/04_heritage-shacl-validate/SKILL.md) | `03_graph.ttl` | Semantic and structural quality gate validating graphs with pySHACL against `HeritageGraph.shacl.ttl`. | `04_shacl_report.json` |
 
 ---
 
@@ -138,6 +138,7 @@ runs/<run_id>/
 ├── 00_preprocessed.json  # Raw OCR text chunks & scanned candidate tags
 ├── 01_extracted.json     # Schema-validated LinkML Container
 ├── 02_resolved.json      # Entities reconciled with external/local URIs
+├── 02_review_queue.json  # Staged candidate matches for human curator review
 ├── 03_graph.ttl          # Triplified CIDOC-CRM / PROV-O Turtle graph
 └── 04_shacl_report.json  # SHACL conformance report & violation diagnostics
 ```
@@ -152,8 +153,11 @@ python skills/01_heritage-extract/scripts/ingest_raw.py "survey_report.pdf"
 # 2. Extract into 01_extracted.json and validate
 python skills/01_heritage-extract/scripts/validate_extraction.py --run-dir runs/<run_id>
 
-# 3. Resolve entities (Stage 2)
+# 3. Resolve entities (Stage 2 - batch mode with review queue staging)
 python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id>
+
+# Or resolve entities interactively with human curator terminal review:
+python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id> --interactive
 
 # 4. Map to RDF (Stage 3)
 python skills/03_heritage-rdf-mapper/scripts/map_to_rdf.py --run-dir runs/<run_id>
@@ -161,6 +165,6 @@ python skills/03_heritage-rdf-mapper/scripts/map_to_rdf.py --run-dir runs/<run_i
 # 5. SHACL Validate (Stage 4)
 python skills/04_heritage-shacl-validate/scripts/validate.py --run-dir runs/<run_id>
 
-# Or execute stages 2-4 end-to-end in one command:
-python skills/00_heritage-to-rdf/scripts/run_pipeline.py --run-dir runs/<run_id>
+# Or execute stages 2-4 end-to-end in one command (supports --interactive):
+python skills/00_heritage-to-rdf/scripts/run_pipeline.py --run-dir runs/<run_id> --interactive
 ```

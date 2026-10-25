@@ -8,38 +8,57 @@ disable-model-invocation: true
 
 # Heritage Entity Resolution (Stage 2)
 
-Input: `extracted.json` from stage 1.  
-Output: `resolved.json`, preserving all source records with an attached `resolution` object on every `mention`.
+Input: `01_extracted.json` from stage 1 (or run workspace).  
+Output: `02_resolved.json`, preserving all source records with an attached `resolution` object on every entity, along with `02_review_queue.json` containing candidates for unlinked or ambiguous entities.
 
-**Core Principle**: A wrong link is worse than no link. An incorrect link silently corrupts the knowledge graph with false assertions. When evidence is ambiguous or confidence is below threshold, mint a predictable local URI. Never synthesize or hallucinate external URIs from memory.
+**Core Principle**: A wrong link is worse than no link. An incorrect link silently corrupts the knowledge graph with false assertions. When evidence is ambiguous or confidence is below threshold, mint a predictable local URI and stage the entity into the Review Queue. Never synthesize or hallucinate external URIs from memory.
+
+## Execution Modes
+
+Stage 2 supports two execution flows:
+
+1. **Automated / Batch Mode (Non-interactive - Default)**:
+   ```bash
+   python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id>
+   ```
+   - Matches against local gazetteers (`assets/gazetteers/` + `assets/gazetteers/curated-links.csv`).
+   - For unresolved entities, mints predictable local URIs (`https://cair-nepal.org/heritagegraph/<kind>/<slug>`) so downstream triplification and SHACL validation are never blocked.
+   - Aggregates external candidate matches (Wikidata, Getty, local gazetteers) and stages them into `02_review_queue.json`.
+   - Records `needs_human_review: true` in `manifest.json`.
+
+2. **Interactive Review Mode (Human-in-the-Loop)**:
+   ```bash
+   # Standalone Stage 2 review
+   python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id> --interactive
+
+   # Or end-to-end pipeline with interactive Stage 2 review
+   python skills/00_heritage-to-rdf/scripts/run_pipeline.py --run-dir runs/<run_id> --interactive
+   ```
+   - Prompts the curator for each item in the review queue with numbered candidates, default local URI, custom URI input, or skip.
+   - Updates `02_resolved.json` with curator decisions (`source: "human-curator"`, `confidence: 1.0`).
+   - **Compounding Curated Gazetteer**: Asks the curator if confirmed links should be saved to `assets/gazetteers/curated-links.csv`. Once saved, future pipeline runs automatically resolve identical entities deterministically!
+   - Updates `manifest.json` with curator decision counts and clears `needs_human_review` if queue is resolved.
 
 ## Workflow
 
 1. **Deterministic Gazetteer Matching**:
-   Run the local matching script against project gazetteers:
-   ```bash
-   python scripts/gazetteer_match.py extracted.json assets/gazetteers/ --out matches.json
-   ```
-   Inspect `matches.json`. Treat `exact` and `context_match` as strong candidates; treat `ambiguous` or `none` as unresolved.
-2. **Query Public Vocabularies**:
-   For mentions with `status: "none"` or `ambiguous`, query authoritative endpoints following the **Source Priority Matrix**:
-   - Getty (AAT / ULAN / TGN): `python scripts/lookup_getty.py "<label>" --vocab <aat|ulan|tgn>`
-   - Wikidata: `python scripts/lookup_wikidata.py "<label>"`
-   *(For endpoint rules, SPARQL quirks, and transliteration handling, consult [references/vocabularies.md](references/vocabularies.md))*.
-   If network access is blocked, notify the user rather than guessing URIs.
-3. **Disambiguate & Score**:
-   Compare context, object production dates, place names, and roles:
-   - **High Confidence ($\ge 0.85$)**: Direct name match with strong contextual agreement $\rightarrow$ `status: "linked"`.
-   - **Partial / Conflicted Evidence**: $\rightarrow$ `status: "ambiguous"` (surface to user).
-   - **No Credible Candidate**: $\rightarrow$ `status: "local"`.
-4. **Mint Local URIs**:
-   For `status: "local"` or unresolved entities, construct deterministic local URIs:
+   Runs against local project gazetteers:
+   - `assets/gazetteers/monuments.csv`
+   - `assets/gazetteers/places.csv`
+   - `assets/gazetteers/curated-links.csv` (human curator decisions)
+2. **Candidate Aggregation**:
+   For mentions without an exact local match, queries candidate endpoints:
+   - Getty (AAT / ULAN / TGN) via `scripts/lookup_getty.py`
+   - Wikidata via `scripts/lookup_wikidata.py`
+   - Use `--no-network` in offline or test environments to prevent outbound network calls.
+3. **Interactive Curation or Review Queue Staging**:
+   - If `--interactive` is enabled, opens the terminal review session.
+   - Otherwise, serializes candidate rankings into `02_review_queue.json` for later inspection or review.
+4. **Deterministic Local Minting**:
+   Any unlinked entity receives a predictable local URI:
    `<base_uri>/<kind>/<slugified-label>` (default base: `https://cair-nepal.org/heritagegraph/`).
-   The same `label` and `kind` must always produce the identical URI.
-5. **Output & Validate**:
-   Write `resolved.json`.
-   **Completion Gate**: Verify that every `mention` in `resolved.json` has a `resolution` block with required fields (`uri`, `source`, `confidence`, `status`, `rationale`).
-6. **Report**: Summarize resolution metrics following the **Reporting Format**.
+5. **Output & Provenance**:
+   Writes `02_resolved.json`, `02_review_queue.json`, and stamps stage metrics in `manifest.json`.
 
 ## Reference: Resolution Schema
 

@@ -29,20 +29,28 @@ SELECT ?s ?label WHERE {{
 }} LIMIT {int(limit)}"""
 
 
+def query_getty(label: str, vocab: str = "aat", limit: int = 5, timeout: int = 20) -> list:
+    """Query Getty SPARQL endpoint and return list of candidate dicts."""
+    url = ENDPOINT + "?" + urllib.parse.urlencode({"query": query(label, vocab, limit)})
+    with urllib.request.urlopen(
+        urllib.request.Request(url, headers={"Accept": "application/sparql-results+json"}),
+        timeout=timeout
+    ) as r:
+        rows = json.load(r)["results"]["bindings"]
+    return [{"uri": b["s"]["value"], "label": b["label"]["value"], "vocab": vocab} for b in rows]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("label")
     ap.add_argument("--vocab", choices=VOCABS, default="aat")
     ap.add_argument("--limit", type=int, default=5)
     args = ap.parse_args()
-    url = ENDPOINT + "?" + urllib.parse.urlencode({"query": query(args.label, args.vocab, args.limit)})
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/sparql-results+json"}), timeout=20) as r:
-            rows = json.load(r)["results"]["bindings"]
+        out = query_getty(args.label, vocab=args.vocab, limit=args.limit)
     except Exception as e:  # network blocked, timeout, endpoint change
         print(f"lookup failed: {e}", file=sys.stderr)
         return 2
-    out = [{"uri": b["s"]["value"], "label": b["label"]["value"], "vocab": args.vocab} for b in rows]
     print(json.dumps(out, indent=2, ensure_ascii=False))
     return 0
 

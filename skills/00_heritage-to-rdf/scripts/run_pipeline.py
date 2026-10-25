@@ -48,6 +48,7 @@ def run_pipeline(
     ontology: str = "cidoc-crm",
     base_uri: str = "https://cair-nepal.org/heritagegraph/",
     shapes: Optional[Union[str, Path]] = None,
+    interactive: bool = False,
 ) -> int:
     """Run pipeline stages sequentially inside an isolated RunWorkspace."""
     ws = None
@@ -91,13 +92,16 @@ def run_pipeline(
             ws.finalize(status="failed", summary={"failed_stage": "stage_01_extract"})
             return rc
 
-    # Stage 2: Entity resolution if 01_extracted.json exists and 02_resolved.json missing
+    # Stage 2: Entity resolution if 01_extracted.json exists and (02_resolved.json missing or interactive review requested)
     p2 = ws.artifact_path(2)
-    if p1.exists() and not p2.exists():
-        rc = run_subcommand([
+    if p1.exists() and (not p2.exists() or interactive):
+        resolve_cmd = [
             sys.executable, resolve_dir / "scripts" / "resolve_entities.py",
             "--run-dir", str(ws.run_dir), "--base", base_uri
-        ])
+        ]
+        if interactive:
+            resolve_cmd.append("--interactive")
+        rc = run_subcommand(resolve_cmd)
         if rc != 0:
             ws.finalize(status="failed", summary={"failed_stage": "stage_02_resolve"})
             return rc
@@ -156,6 +160,7 @@ def main():
     ap.add_argument("--ontology", default="cidoc-crm", help="Target ontology mapping (default: cidoc-crm)")
     ap.add_argument("--base", default="https://cair-nepal.org/heritagegraph/", help="Base URI for local minting")
     ap.add_argument("--shapes", default=None, help="Path to SHACL shapes file")
+    ap.add_argument("--interactive", "-i", action="store_true", help="Launch interactive human review in Stage 2")
     args = ap.parse_args()
 
     return run_pipeline(
@@ -163,7 +168,8 @@ def main():
         run_dir=args.run_dir,
         ontology=args.ontology,
         base_uri=args.base,
-        shapes=args.shapes
+        shapes=args.shapes,
+        interactive=args.interactive,
     )
 
 
