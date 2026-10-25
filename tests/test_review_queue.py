@@ -84,6 +84,38 @@ def test_review_queue_staging(temp_run_env):
     assert stage02["metrics"]["review_queue_count"] == 1
 
 
+def test_review_queue_unlinking_when_empty(temp_run_env):
+    ws = temp_run_env
+
+    # Seed 01_extracted.json where all entities are exact gazetteer matches
+    extracted_data = {
+        "id": "heritageGraph:batch-test-review-empty",
+        "places": [
+            {
+                "id": "heritageGraph:place-patan",
+                "name": "Patan",
+                "note": "Ancient city in Kathmandu Valley"
+            }
+        ]
+    }
+    ws.artifact_path(1).write_text(json.dumps(extracted_data), encoding="utf-8")
+
+    # Manually create a pre-existing 02_review_queue.json to test unlinking
+    stale_queue_file = ws.run_dir / "02_review_queue.json"
+    stale_queue_file.write_text("[]", encoding="utf-8")
+    assert stale_queue_file.exists()
+
+    rc = run_cli(resolve_main, ["--run-dir", str(ws.run_dir), "--no-network"])
+    assert rc == 0
+
+    # Review queue should be unlinked/removed since there are no unlinked items
+    assert not stale_queue_file.exists()
+
+    m = ws.load_manifest()
+    assert m["stages"]["stage_02_resolve"]["metrics"]["needs_human_review"] is False
+    assert m["stages"]["stage_02_resolve"]["metrics"]["review_queue_count"] == 0
+
+
 def run_cli(main_fn, args_list):
     orig = sys.argv
     try:
@@ -91,3 +123,4 @@ def run_cli(main_fn, args_list):
         return main_fn()
     finally:
         sys.argv = orig
+

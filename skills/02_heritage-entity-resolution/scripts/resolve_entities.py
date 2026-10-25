@@ -80,26 +80,19 @@ def fetch_candidates(
 
     # 2. Query Wikidata
     try:
-        from lookup_wikidata import API as WIKI_API
-        import urllib.request
-        params = {"action": "wbsearchentities", "search": label, "language": "en", "limit": limit, "format": "json"}
-        req = urllib.request.Request(
-            WIKI_API + "?" + urllib.parse.urlencode(params),
-            headers={"User-Agent": "heritage-rdf-skills/0.1"}
-        )
-        with urllib.request.urlopen(req, timeout=4) as r:
-            wiki_hits = json.load(r).get("search", [])
-            for h in wiki_hits:
-                uri = f"http://www.wikidata.org/entity/{h['id']}"
-                if uri not in seen_uris:
-                    candidates.append({
-                        "uri": uri,
-                        "label": h.get("label", label),
-                        "source": "wikidata",
-                        "description": h.get("description", ""),
-                        "confidence": 0.85,
-                    })
-                    seen_uris.add(uri)
+        from lookup_wikidata import query_wikidata
+        wiki_hits = query_wikidata(label, limit=limit, timeout=4)
+        for h in wiki_hits:
+            uri = h["uri"]
+            if uri not in seen_uris:
+                candidates.append({
+                    "uri": uri,
+                    "label": h.get("label", label),
+                    "source": "wikidata",
+                    "description": h.get("description", ""),
+                    "confidence": 0.85,
+                })
+                seen_uris.add(uri)
     except Exception:
         pass
 
@@ -107,24 +100,19 @@ def fetch_candidates(
     if kind in ("material", "technique", "concept", "structure", "person", "place"):
         vocab = "aat" if kind in ("material", "technique", "concept") else ("ulan" if kind == "person" else "tgn")
         try:
-            from lookup_getty import ENDPOINT as GETTY_ENDPOINT, query as getty_query
-            url = GETTY_ENDPOINT + "?" + urllib.parse.urlencode({"query": getty_query(label, vocab, limit)})
-            with urllib.request.urlopen(
-                urllib.request.Request(url, headers={"Accept": "application/sparql-results+json"}),
-                timeout=4
-            ) as r:
-                rows = json.load(r)["results"]["bindings"]
-                for b in rows:
-                    uri = b["s"]["value"]
-                    if uri not in seen_uris:
-                        candidates.append({
-                            "uri": uri,
-                            "label": b["label"]["value"],
-                            "source": f"getty-{vocab}",
-                            "description": "",
-                            "confidence": 0.85,
-                        })
-                        seen_uris.add(uri)
+            from lookup_getty import query_getty
+            getty_hits = query_getty(label, vocab=vocab, limit=limit, timeout=4)
+            for b in getty_hits:
+                uri = b["uri"]
+                if uri not in seen_uris:
+                    candidates.append({
+                        "uri": uri,
+                        "label": b.get("label", label),
+                        "source": f"getty-{vocab}",
+                        "description": "",
+                        "confidence": 0.85,
+                    })
+                    seen_uris.add(uri)
         except Exception:
             pass
 
@@ -245,6 +233,7 @@ def interactive_review_session(
     print("=" * 60)
 
     curator_decisions = 0
+    resolved_ids = set()
 
     # Build index of items by ID for quick updating
     id_map = {}
@@ -319,6 +308,7 @@ def interactive_review_session(
                 "rationale": f"Verified by human curator for '{item['label']}'",
             }
             curator_decisions += 1
+            resolved_ids.add(item["id"])
             print(f"      -> Resolved to: {selected_uri}")
 
             # Offer to save into curated-links.csv
@@ -337,7 +327,11 @@ def interactive_review_session(
                     )
                     print(f"      -> Saved to {curated_csv_path.name}")
 
-    return {"data": resolved_data, "curator_decisions": curator_decisions}
+    return {
+        "data": resolved_data,
+        "curator_decisions": curator_decisions,
+        "resolved_ids": resolved_ids,
+    }
 
 
 def main():
@@ -418,19 +412,24 @@ def main():
         )
         resolved_data = review_result["data"]
         curator_decisions = review_result["curator_decisions"]
-        # Re-filter review queue to remove items verified by curator
-        reviewed_ids = {item["id"] for item in review_queue if id_map_resolved(resolved_data, item["id"])}
-        review_queue = [q for q in review_queue if q["id"] not in reviewed_ids]
+        resolved_ids = review_result.get("resolved_ids", set())
+        review_queue = [q for q in review_queue if q.get("id") not in resolved_ids]
 
     # Save 02_resolved.json
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(resolved_data, f, indent=2, ensure_ascii=False)
 
-    # Save 02_review_queue.json if review queue path is known and queue is non-empty
+    # Save 02_review_queue.json if review queue path is known; remove stale file if queue is empty
     if review_queue_path:
-        with open(review_queue_path, "w", encoding="utf-8") as f:
-            json.dump(review_queue, f, indent=2, ensure_ascii=False)
+        if review_queue:
+            with open(review_queue_path, "w", encoding="utf-8") as f:
+                json.dump(review_queue, f, indent=2, ensure_ascii=False)
+        elif review_queue_path.exists():
+            try:
+                review_queue_path.unlink()
+            except OSError:
+                pass
 
     metrics = {
         **counts,
@@ -448,17 +447,6 @@ def main():
         print("Run with '--interactive' to review choices.")
     print(f"Output saved to: {out_path}")
     return 0
-
-
-def id_map_resolved(data: Dict[str, Any], entity_id: str) -> bool:
-    """Check if an entity has been verified by human curator."""
-    for col, items in data.items():
-        if isinstance(items, list):
-            for it in items:
-                if isinstance(it, dict) and it.get("id") == entity_id:
-                    res = it.get("resolution", {})
-                    return "human-curator" in res.get("source", "")
-    return False
 
 
 if __name__ == "__main__":
