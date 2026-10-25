@@ -12,8 +12,8 @@ Orchestrate the end-to-end transformation of cultural heritage data into a valid
 
 ```mermaid
 flowchart LR
-    RawData["Raw Heritage Data<br/>(Text / Logs / CSV)"] --> Stage1["1. Extract & Structure<br/><i>(01_heritage-extract)</i>"]
-    Stage1 -->|"extracted.json"| Stage2["2. Entity Resolution<br/><i>(02_heritage-entity-resolution)</i>"]
+    RawData["Raw Heritage Data<br/>(PDF Reports / CSV / JSON / Text)"] --> Stage1["1. Ingest & Extract<br/><i>(01_heritage-extract)</i>"]
+    Stage1 -->|"extracted.json (LinkML Container)"| Stage2["2. Entity Resolution<br/><i>(02_heritage-entity-resolution)</i>"]
     Stage2 -->|"resolved.json"| Stage3["3. Deterministic Mapper<br/><i>(03_heritage-rdf-mapper)</i>"]
     Stage3 -->|"graph.ttl"| Stage4["4. SHACL Validation<br/><i>(04_heritage-shacl-validate)</i>"]
     Stage4 -->|CONFORMS| Output["Validated RDF Graph<br/>(HeritageGraph Platform)"]
@@ -21,10 +21,10 @@ flowchart LR
 ```
 
 ## Supported Inputs
-- Unstructured texts & historical records
-- Tabular / database exports (CSV, JSON)
-- Documents (PDF, DOCX, Spreadsheets)
-- Audio / transcripts (SRT, WebVTT)
+- Multi-page PDF survey reports & books (with OCR text normalization & page chunking)
+- Tabular spreadsheets (CSV, TSV, XLSX)
+- Museum and archival catalog dumps (JSON)
+- Unstructured field notes, transcripts, and inscriptions
 
 ## Pipeline Steps
 

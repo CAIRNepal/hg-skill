@@ -1,6 +1,6 @@
 # HeritageGraph Skills (`hg-skill`)
 
-Repository containing agent skills for transforming unstructured texts, archival records, and tabular cultural heritage data into validated, ontology-grounded RDF Turtle (`.ttl`) for contribution to the **[HeritageGraph](https://cairnepal.github.io/heritagegraphontology/)** platform by **CAIR-Nepal**.
+Repository containing agent skills for transforming unstructured texts, archival records, multi-page PDF survey reports, and tabular cultural heritage datasets into validated, ontology-grounded RDF Turtle (`.ttl`) for contribution to the **[HeritageGraph](https://cairnepal.github.io/heritagegraphontology/)** platform by **CAIR-Nepal**.
 
 ---
 
@@ -10,17 +10,20 @@ Repository containing agent skills for transforming unstructured texts, archival
 flowchart LR
     subgraph RawData["Raw Heritage Data"]
         direction TB
-        R1["📄 Museum Logs<br/>(Unstructured Text)"]
-        R2["📜 Historical Records"]
-        R3["🗄️ Database Exports<br/>(CSV / JSON)"]
+        R1["📄 Field Surveys & Reports<br/>(Multi-page PDF / OCR)"]
+        R2["📜 Inscriptions & Field Notes<br/>(Unstructured Text)"]
+        R3["🗄️ Inventories & Catalog Dumps<br/>(CSV / TSV / XLSX / JSON)"]
     end
 
     subgraph AISkills["AI: Skill Execution"]
         direction TB
-        subgraph Stage1["1. Extract & Structure"]
-            S1["Information Extraction<br/><i>(01_heritage-extract)</i>"]
-            O1[/"extracted.json"/]
-            S1 --> O1
+        subgraph Stage1["1. Ingest, Preprocess & Extract"]
+            direction TB
+            Pre["Multi-Format Ingestion & OCR Cleaning<br/><i>(ingest_raw.py / pypdf)</i>"]
+            Scan["Living Heritage Scanner<br/><i>(Guthi, Style, Calendar Tagger)</i>"]
+            S1["Container Extraction<br/><i>(01_heritage-extract)</i>"]
+            O1[/"extracted.json<br/>(LinkML Container)"/]
+            Pre --> Scan --> S1 --> O1
         end
 
         subgraph Stage2["2. Entity Resolution"]
@@ -51,7 +54,7 @@ flowchart LR
 
     subgraph OutputGraph["RDF (Turtle / TTL) Graph"]
         direction TB
-        Final["🕸️ Semantic Node-Graph<br/><code>ex:monument_001 a crm:E22_Human-Made_Object ;<br/>&nbsp;&nbsp;crm:P14_carried_out_by ex:artisan_042 .</code>"]
+        Final["🕸️ Semantic Knowledge Graph<br/><code>heritageGraph:struct-nyatapola a heritageGraph:ArchitecturalStructure ;<br/>&nbsp;&nbsp;heritageGraph:hasArchitecturalStyle 'Pagoda' ;<br/>&nbsp;&nbsp;heritageGraph:managedByGuthi heritageGraph:guthi-siddhi-lakshmi .</code>"]
     end
 
     RawData --> Stage1
@@ -68,13 +71,38 @@ flowchart LR
 
 The transformation pipeline is organized under [`skills/`](skills/):
 
-| Stage | Skill | Description | Primary Output |
-|---|---|---|---|
-| **00** | [00_heritage-to-rdf](skills/00_heritage-to-rdf/SKILL.md) | End-to-end pipeline orchestrator managing stages 1 through 4. | `graph.ttl` |
-| **01** | [01_heritage-extract](skills/01_heritage-extract/SKILL.md) | AI extraction from unstructured/tabular texts into schema-valid JSON. | `extracted.json` |
-| **02** | [02_heritage-entity-resolution](skills/02_heritage-entity-resolution/SKILL.md) | Entity grounding and disambiguation via gazetteers, Getty, and Wikidata. | `resolved.json` |
-| **03** | [03_heritage-rdf-mapper](skills/03_heritage-rdf-mapper/SKILL.md) | Deterministic triplification into RDF Turtle using declarative CIDOC-CRM mappings. | `graph.ttl` |
-| **04** | [04_heritage-shacl-validate](skills/04_heritage-shacl-validate/SKILL.md) | Semantic and structural quality gate validating graphs with pySHACL against HeritageGraph shapes. | `validation-report.json` |
+| Stage | Skill | Supported Raw Formats | Description | Primary Output |
+|---|---|---|---|---|
+| **00** | [00_heritage-to-rdf](skills/00_heritage-to-rdf/SKILL.md) | All | End-to-end pipeline orchestrator managing stages 1 through 4. | `graph.ttl` |
+| **01** | [01_heritage-extract](skills/01_heritage-extract/SKILL.md) | **PDF**, **CSV**, **TSV**, **XLSX**, **JSON**, raw text | Ingests multi-page PDFs (with OCR line-repair), tabular sheets, and raw texts; scans living heritage; structures into LinkML `Container`. | `extracted.json` |
+| **02** | [02_heritage-entity-resolution](skills/02_heritage-entity-resolution/SKILL.md) | `extracted.json` | Entity grounding and disambiguation via gazetteers, Getty (AAT, ULAN), and Wikidata. | `resolved.json` |
+| **03** | [03_heritage-rdf-mapper](skills/03_heritage-rdf-mapper/SKILL.md) | `resolved.json` | Deterministic triplification into RDF Turtle using declarative CIDOC-CRM / HeritageGraph mappings. | `graph.ttl` |
+| **04** | [04_heritage-shacl-validate](skills/04_heritage-shacl-validate/SKILL.md) | `graph.ttl` | Semantic and structural quality gate validating graphs with pySHACL against `HeritageGraph.shacl.ttl`. | `validation-report.json` |
+
+---
+
+## Stage 1 Ingestion & Preprocessing
+
+Stage 1 provides a unified CLI to ingest and prepare heterogeneous raw heritage data before LLM extraction:
+
+```bash
+# Multi-page PDF survey report (extracts text, rejoins hyphenated OCR breaks, strips running page noise)
+python skills/01_heritage-extract/scripts/ingest_raw.py survey_report.pdf --out preprocessed.json
+
+# Tabular inventory spreadsheet (separates administrative columns from narrative prose)
+python skills/01_heritage-extract/scripts/ingest_raw.py monuments.csv --out preprocessed.json
+python skills/01_heritage-extract/scripts/ingest_raw.py monuments.xlsx --out preprocessed.json
+
+# Museum or archival catalog JSON dump
+python skills/01_heritage-extract/scripts/ingest_raw.py catalog.json --out preprocessed.json
+```
+
+### Living Heritage Candidate Recognition
+The preprocessor automatically tags candidate mentions aligned to LinkML enums in `schemas/HeritageGraph.yaml`:
+- **Guthi Types**: `SiGuthi`, `RajGuthi`, `JatraGuthi`, `PujaGuthi`, `TempleGuthi`, `NashaGuthi`, `SanaGuthi`, `SanGuthi`.
+- **Architectural Styles**: `Pagoda`, `Shikhara`, `Chaitya`, `Stupa`, `Dome`.
+- **Calendar Eras**: Nepal Sambat (`NS`), Bikram Sambat (`VS`), Shaka Sambat (`ŚS`), Common Era (`CE/BCE`).
+- **Religious Traditions**: Buddhist, Shaiva, Vaishnava, Shakta, Newar syncretic.
 
 ---
 

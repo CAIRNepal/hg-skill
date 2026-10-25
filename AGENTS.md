@@ -21,7 +21,7 @@ Single-context repository using `GLOSSARY.md` and `docs/adr/`. See `docs/agents/
 The transformation pipeline comprises sequential stages orchestrated under `skills/`:
 
 - `skills/00_heritage-to-rdf`: End-to-end pipeline orchestrator from ingestion to validated graph.
-- `skills/01_heritage-extract`: Extracts raw inputs into schema-validated `extracted.json`.
+- `skills/01_heritage-extract`: Ingests multi-page PDFs, spreadsheets (CSV/XLSX), JSON catalogs, and text, scanning living heritage and structuring records into schema-validated `extracted.json`.
 - `skills/02_heritage-entity-resolution`: Reconciles entities with Getty vocabularies, Wikidata, and local gazetteers into `resolved.json`.
 - `skills/03_heritage-rdf-mapper`: Deterministically triplifies records to `graph.ttl` using CIDOC-CRM mapping.
 - `skills/04_heritage-shacl-validate`: Validates graph syntax and structural integrity against `schemas/HeritageGraph.shacl.ttl`.
