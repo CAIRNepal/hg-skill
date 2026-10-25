@@ -128,10 +128,39 @@ python scripts/update_ontology.py --ref v1.0.1
 
 ---
 
-## Quick Start: End-to-End Execution
+## Pipeline Run Workspace & Artifact Lifecycle
 
-Once stages 1 and 2 produce `resolved.json`, run the deterministic mapping and validation pipeline:
+Every transformation execution operates in an isolated run workspace under `runs/<run_id>/` (e.g., `runs/2026-10-25_idjmss-patan/`). Stage artifacts follow a standardized ordering with full provenance tracked in `manifest.json`:
+
+```
+runs/<run_id>/
+├── manifest.json         # Provenance envelope (source hash, git commit, timestamps, metrics)
+├── 00_preprocessed.json  # Raw OCR text chunks & scanned candidate tags
+├── 01_extracted.json     # Schema-validated LinkML Container
+├── 02_resolved.json      # Entities reconciled with external/local URIs
+├── 03_graph.ttl          # Triplified CIDOC-CRM / PROV-O Turtle graph
+└── 04_shacl_report.json  # SHACL conformance report & violation diagnostics
+```
+
+### Running the Pipeline
 
 ```bash
-python skills/00_heritage-to-rdf/scripts/run_pipeline.py resolved.json
+# 1. Ingest raw document into an auto-created or explicit run directory
+python skills/01_heritage-extract/scripts/ingest_raw.py "survey_report.pdf"
+# Emits runs/<date>_<slug>/00_preprocessed.json and initializes manifest.json
+
+# 2. Extract into 01_extracted.json and validate
+python skills/01_heritage-extract/scripts/validate_extraction.py --run-dir runs/<run_id>
+
+# 3. Resolve entities (Stage 2)
+python skills/02_heritage-entity-resolution/scripts/resolve_entities.py --run-dir runs/<run_id>
+
+# 4. Map to RDF (Stage 3)
+python skills/03_heritage-rdf-mapper/scripts/map_to_rdf.py --run-dir runs/<run_id>
+
+# 5. SHACL Validate (Stage 4)
+python skills/04_heritage-shacl-validate/scripts/validate.py --run-dir runs/<run_id>
+
+# Or execute stages 2-4 end-to-end in one command:
+python skills/00_heritage-to-rdf/scripts/run_pipeline.py --run-dir runs/<run_id>
 ```
