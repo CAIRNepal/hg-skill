@@ -1,0 +1,91 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix crm:  <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix hs:   <https://example.org/heritage-shapes/> .
+
+# Validated with inference=none, so shapes name concrete classes explicitly.
+
+hs:ObjectShape a sh:NodeShape ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:property [
+        sh:path crm:P2_has_type ; sh:minCount 1 ; sh:class crm:E55_Type ;
+        sh:message "Every object needs a type (crm:P2_has_type) that is a crm:E55_Type."
+    ] ;
+    sh:property [
+        sh:path crm:P1_is_identified_by ; sh:minCount 1 ; sh:class crm:E42_Identifier ;
+        sh:message "Every object needs at least one identifier (crm:P1_is_identified_by, crm:E42_Identifier)."
+    ] ;
+    sh:property [
+        sh:path crm:P108i_was_produced_by ; sh:maxCount 1 ; sh:class crm:E12_Production ;
+        sh:message "An object has at most one production event, and it must be a crm:E12_Production."
+    ] ;
+    sh:property [
+        sh:path crm:P14_carried_out_by ; sh:maxCount 0 ;
+        sh:message "crm:P14_carried_out_by must not be placed on an object; attach it to the crm:E12_Production."
+    ] ;
+    sh:property [
+        sh:path crm:P45_consists_of ;
+        sh:class crm:E57_Material ;
+        sh:message "crm:P45_consists_of must point to a crm:E57_Material."
+    ] ;
+    sh:property [
+        sh:path crm:P55_has_current_location ;
+        sh:class crm:E53_Place ;
+        sh:message "crm:P55_has_current_location must point to a crm:E53_Place."
+    ] .
+
+hs:IdentifierShape a sh:NodeShape ;
+    sh:targetClass crm:E42_Identifier ;
+    sh:property [
+        sh:path crm:P190_has_symbolic_content ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "An identifier needs exactly one non-language-tagged crm:P190_has_symbolic_content string."
+    ] .
+
+hs:ProductionShape a sh:NodeShape ;
+    sh:targetClass crm:E12_Production ;
+    sh:property [
+        sh:path crm:P14_carried_out_by ;
+        sh:or ( [ sh:class crm:E21_Person ] [ sh:class crm:E74_Group ] [ sh:class crm:E39_Actor ] ) ;
+        sh:message "crm:P14_carried_out_by on a production must point to an actor (person or group)."
+    ] ;
+    sh:property [
+        sh:path crm:P7_took_place_at ; sh:class crm:E53_Place ;
+        sh:message "crm:P7_took_place_at must point to a crm:E53_Place."
+    ] ;
+    sh:property [
+        sh:path crm:P4_has_time-span ; sh:maxCount 1 ; sh:class crm:E52_Time-Span ;
+        sh:message "A production has at most one time-span (crm:E52_Time-Span)."
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath crm:P108i_was_produced_by ] ; sh:minCount 1 ;
+        sh:message "A production must belong to an object (no orphan crm:E12_Production)."
+    ] .
+
+hs:TimeSpanShape a sh:NodeShape ;
+    sh:targetClass crm:E52_Time-Span ;
+    sh:property [
+        sh:path crm:P82a_begin_of_the_begin ; sh:maxCount 1 ;
+        sh:or ( [ sh:datatype xsd:gYear ] [ sh:datatype xsd:gYearMonth ] [ sh:datatype xsd:date ] ) ;
+        sh:message "crm:P82a_begin_of_the_begin must be an xsd:gYear, xsd:gYearMonth or xsd:date."
+    ] ;
+    sh:property [
+        sh:path crm:P82b_end_of_the_end ; sh:maxCount 1 ;
+        sh:or ( [ sh:datatype xsd:gYear ] [ sh:datatype xsd:gYearMonth ] [ sh:datatype xsd:date ] ) ;
+        sh:message "crm:P82b_end_of_the_end must be an xsd:gYear, xsd:gYearMonth or xsd:date."
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "Time-span begins after it ends." ;
+        sh:prefixes [
+            sh:declare [ sh:prefix "crm" ; sh:namespace "http://www.cidoc-crm.org/cidoc-crm/"^^xsd:anyURI ] ,
+                       [ sh:prefix "xsd" ; sh:namespace "http://www.w3.org/2001/XMLSchema#"^^xsd:anyURI ]
+        ] ;
+        sh:select """
+            SELECT $this ?b ?e WHERE {
+              $this crm:P82a_begin_of_the_begin ?b ; crm:P82b_end_of_the_end ?e .
+              BIND (IF(STRSTARTS(STR(?b), "-"), -xsd:integer(SUBSTR(STR(?b), 2, 4)), xsd:integer(SUBSTR(STR(?b), 1, 4))) AS ?by)
+              BIND (IF(STRSTARTS(STR(?e), "-"), -xsd:integer(SUBSTR(STR(?e), 2, 4)), xsd:integer(SUBSTR(STR(?e), 1, 4))) AS ?ey)
+              FILTER (?by > ?ey)
+            }"""
+    ] .

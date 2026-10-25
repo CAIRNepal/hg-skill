@@ -1,0 +1,5 @@
+uri,label,alt_labels,kind,context
+https://example.org/gazetteer/place/patan,Patan,Lalitpur|Yala,place,Kathmandu Valley
+https://example.org/gazetteer/place/bhaktapur,Bhaktapur,Bhadgaon|Khwopa,place,Kathmandu Valley
+https://example.org/gazetteer/material/bronze,Bronze,,material,
+https://example.org/gazetteer/material/wood,Wood,Timber,material,

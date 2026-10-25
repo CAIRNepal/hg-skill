@@ -1,0 +1,113 @@
+# CIDOC-CRM (ISO 21127) mapping. See references/mapping-format.md.
+name: cidoc-crm
+prefixes:
+  crm: http://www.cidoc-crm.org/cidoc-crm/
+
+object:
+  class: crm:E22_Human-Made_Object
+  uri: "object/{id}"
+
+entity_label: rdfs:label
+entity_classes:
+  person: crm:E21_Person
+  group: crm:E74_Group
+  place: crm:E53_Place
+  material: crm:E57_Material
+  technique: crm:E55_Type
+  concept: crm:E55_Type
+  other: crm:E1_CRM_Entity
+
+rules:
+  # What kind of thing it is (shared type node per label across the whole graph)
+  - field: object_type
+    steps:
+      - {p: crm:P2_has_type, node: type, class: crm:E55_Type, global: true}
+      - {p: rdfs:label, literal: true, lang: source}
+
+  - field: title
+    steps:
+      - {p: crm:P102_has_title, node: title, class: crm:E35_Title}
+      - {p: crm:P190_has_symbolic_content, literal: true, lang: source}
+
+  - field: identifiers
+    value: value
+    steps:
+      - {p: crm:P1_is_identified_by, node: identifier, class: crm:E42_Identifier, per_item: true}
+      - {p: crm:P190_has_symbolic_content, literal: true}
+
+  - field: identifiers.scheme
+    steps:
+      - {p: crm:P1_is_identified_by, node: identifier, class: crm:E42_Identifier, per_item: true}
+      - {p: crm:P2_has_type, node: idtype, class: crm:E55_Type, global: true}
+      - {p: rdfs:label, literal: true}
+
+  - field: description
+    steps:
+      - {p: crm:P3_has_note, literal: true, lang: source}
+
+  - field: materials
+    steps:
+      - {p: crm:P45_consists_of, entity: true}
+
+  # Production event: creators, date and place all hang off ONE E12_Production.
+  # P14_carried_out_by has an activity as its domain, so it is never placed on the object.
+  - field: creators
+    steps:
+      - {p: crm:P108i_was_produced_by, node: production, class: crm:E12_Production}
+      - {p: crm:P14_carried_out_by, entity: true}
+
+  - field: production.date.text
+    steps:
+      - {p: crm:P108i_was_produced_by, node: production, class: crm:E12_Production}
+      - {p: crm:P4_has_time-span, node: timespan, class: crm:E52_Time-Span}
+      - {p: rdfs:label, literal: true}
+
+  - field: production.date.earliest
+    steps:
+      - {p: crm:P108i_was_produced_by, node: production, class: crm:E12_Production}
+      - {p: crm:P4_has_time-span, node: timespan, class: crm:E52_Time-Span}
+      - {p: crm:P82a_begin_of_the_begin, literal: true, datatype: auto}
+
+  - field: production.date.latest
+    steps:
+      - {p: crm:P108i_was_produced_by, node: production, class: crm:E12_Production}
+      - {p: crm:P4_has_time-span, node: timespan, class: crm:E52_Time-Span}
+      - {p: crm:P82b_end_of_the_end, literal: true, datatype: auto}
+
+  - field: production.place
+    steps:
+      - {p: crm:P108i_was_produced_by, node: production, class: crm:E12_Production}
+      - {p: crm:P7_took_place_at, entity: true}
+
+  - field: current_location
+    steps:
+      - {p: crm:P55_has_current_location, entity: true}
+
+  # Provenance entries become acquisition-like activities, kept as notes plus agent.
+  - field: provenance.text
+    steps:
+      - {p: crm:P12i_was_present_at, node: provenance, class: crm:E8_Acquisition, per_item: true}
+      - {p: crm:P3_has_note, literal: true, lang: source}
+
+  - field: provenance.agent
+    steps:
+      - {p: crm:P12i_was_present_at, node: provenance, class: crm:E8_Acquisition, per_item: true}
+      - {p: crm:P14_carried_out_by, entity: true}
+
+  - field: provenance.date.text
+    steps:
+      - {p: crm:P12i_was_present_at, node: provenance, class: crm:E8_Acquisition, per_item: true}
+      - {p: crm:P4_has_time-span, node: provenance_ts, class: crm:E52_Time-Span, per_item: true}
+      - {p: rdfs:label, literal: true}
+
+  - field: provenance.date.earliest
+    steps:
+      - {p: crm:P12i_was_present_at, node: provenance, class: crm:E8_Acquisition, per_item: true}
+      - {p: crm:P4_has_time-span, node: provenance_ts, class: crm:E52_Time-Span, per_item: true}
+      - {p: crm:P82a_begin_of_the_begin, literal: true, datatype: auto}
+
+  - field: provenance.date.latest
+    steps:
+      - {p: crm:P12i_was_present_at, node: provenance, class: crm:E8_Acquisition, per_item: true}
+      - {p: crm:P4_has_time-span, node: provenance_ts, class: crm:E52_Time-Span, per_item: true}
+      - {p: crm:P82b_end_of_the_end, literal: true, datatype: auto}
