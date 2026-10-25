@@ -21,6 +21,16 @@ import yaml
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, RDF, RDFS, SKOS, XSD
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+COMMON_DIR = REPO_ROOT / "skills" / "common"
+if str(COMMON_DIR) not in sys.path:
+    sys.path.insert(0, str(COMMON_DIR))
+
+try:
+    from run_workspace import RunWorkspace
+except ImportError:
+    RunWorkspace = None
+
 BUILTIN_PREFIXES = {
     "rdf": str(RDF), "rdfs": str(RDFS), "xsd": str(XSD), "skos": str(SKOS), "dcterms": str(DCTERMS),
 }
@@ -187,16 +197,62 @@ class Mapper:
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("resolved")
-    ap.add_argument("--mapping", required=True)
+    ap = argparse.ArgumentParser(description="Map resolved or extracted heritage records to RDF Turtle.")
+    ap.add_argument("resolved", nargs="?", default=None, help="Path to resolved or extracted JSON file")
+    ap.add_argument("--run-dir", default=None, help="Pipeline run directory")
+    ap.add_argument("--mapping", default=None, help="Path to YAML mapping rules")
     ap.add_argument("--base", default="https://example.org/heritage/")
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out", default=None, help="Path to output Turtle file (.ttl)")
     ap.add_argument("--strict", action="store_true")
     args = ap.parse_args()
 
-    data = json.load(open(args.resolved, encoding="utf-8"))
-    mapping = yaml.safe_load(open(args.mapping, encoding="utf-8"))
+    ws = None
+    resolved_path = None
+    out_path = None
+
+    if args.run_dir or (args.resolved and Path(args.resolved).is_dir()):
+        run_path = Path(args.run_dir if args.run_dir else args.resolved)
+        if RunWorkspace:
+            try:
+                ws = RunWorkspace.find(run_path)
+            except Exception:
+                ws = RunWorkspace(run_path)
+            p2 = ws.artifact_path(2)
+            p1 = ws.artifact_path(1)
+            resolved_path = p2 if p2.exists() else p1
+            out_path = ws.artifact_path(3)
+        else:
+            p2 = run_path / "02_resolved.json"
+            p1 = run_path / "01_extracted.json"
+            resolved_path = p2 if p2.exists() else p1
+            out_path = run_path / "03_graph.ttl"
+    elif args.resolved:
+        resolved_path = Path(args.resolved)
+    else:
+        ap.error("Must provide either input JSON path or --run-dir")
+
+    if args.out:
+        out_path = Path(args.out)
+    elif not out_path:
+        ap.error("the following arguments are required: --out (or specify --run-dir)")
+
+    mapping_path = args.mapping
+    if not mapping_path:
+        default_map = Path(__file__).resolve().parent.parent / "assets" / "mappings" / "cidoc-crm.yaml"
+        if default_map.exists():
+            mapping_path = str(default_map)
+        else:
+            ap.error("the following arguments are required: --mapping")
+
+    if not resolved_path.exists():
+        print(f"Error: Input file not found: {resolved_path}", file=sys.stderr)
+        return 1
+
+    if ws:
+        ws.record_stage_start(3, "map", {"mapping": str(mapping_path), "base": args.base, "input": str(resolved_path)})
+
+    data = json.load(open(resolved_path, encoding="utf-8"))
+    mapping = yaml.safe_load(open(mapping_path, encoding="utf-8"))
     language = (data.get("source") or {}).get("language")
     mapper = Mapper(mapping, args.base, language)
     records = data.get("records")
@@ -212,10 +268,20 @@ def main():
     for rec in records:
         if isinstance(rec, dict) and "id" in rec:
             mapper.map_record(rec)
-    mapper.g.serialize(destination=args.out, format="turtle")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    mapper.g.serialize(destination=str(out_path), format="turtle")
     unmapped = mapper.unmapped(records)
-    report = {"records": len(records), "triples": len(mapper.g),
-              "entities": mapper.counts, "unmapped_fields": unmapped, "out": args.out}
+    report = {
+        "records": len(records),
+        "triples": len(mapper.g),
+        "entities": mapper.counts,
+        "unmapped_fields": unmapped,
+        "out": str(out_path)
+    }
+    if ws:
+        ws.record_stage_finish(3, "map", status="success", metrics=report)
+
     print(json.dumps(report, indent=2))
     return 1 if (args.strict and unmapped) else 0
 
