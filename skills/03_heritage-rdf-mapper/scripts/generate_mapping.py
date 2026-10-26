@@ -122,7 +122,7 @@ def main():
     content = generate(args.schema, overrides)
 
     if args.check:
-        if out.exists() and out.read_bytes() == content:
+        if out.exists() and out.read_bytes().replace(b"\r\n", b"\n") == content:
             print(f"{out} is up to date")
             return 0
         print(f"{out} is stale or missing; regenerate with generate_mapping.py", file=sys.stderr)

@@ -175,6 +175,21 @@ class Mapper:
             return URIRef(self.prefixes[prefix] + local)
         return URIRef(self.base + slugify(s))
 
+    def container_resolution(self, subj, item):
+        """Stage 2 results never replace the entity URI: linked -> skos:exactMatch to the external
+        URI; ambiguous -> review comment; local -> nothing (the id already is the local URI)."""
+        res = item.get("resolution")
+        if not isinstance(res, dict):
+            return
+        status = res.get("status") or ("linked" if res.get("uri") else "local")
+        if status not in self.counts:
+            return
+        self.counts[status] += 1
+        if status == "linked" and res.get("uri") and URIRef(res["uri"]) != subj:
+            self.g.add((subj, SKOS.exactMatch, URIRef(res["uri"])))
+        elif status == "ambiguous":
+            self.g.add((subj, RDFS.comment, Literal("Entity resolution was ambiguous; needs human review.")))
+
     def container_literal(self, value, slot):
         dt = slot.get("datatype")
         if isinstance(value, bool):
@@ -202,6 +217,7 @@ class Mapper:
                 mapped.append((col, item))
                 subj = self.expand(item["id"])
                 self.g.add((subj, RDF.type, self.q(cfg["class"])))
+                self.container_resolution(subj, item)
                 for key, slot in cfg.get("slots", {}).items():
                     p = self.q(slot["p"])
                     for val in self.container_values(item, key):
