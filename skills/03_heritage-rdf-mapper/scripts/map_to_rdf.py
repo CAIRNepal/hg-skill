@@ -325,7 +325,7 @@ def main():
 
     mapping_path = args.mapping
     if not mapping_path:
-        default_map = Path(__file__).resolve().parent.parent / "assets" / "mappings" / "cidoc-crm.yaml"
+        default_map = Path(__file__).resolve().parent.parent / "assets" / "mappings" / "heritagegraph.yaml"
         if default_map.exists():
             mapping_path = str(default_map)
         else:
@@ -364,6 +364,8 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
     mapper.g.serialize(destination=str(out_path), format="turtle")
     report = {
+        "mapping": mapping.get("name"),
+        "schema_version": (mapping.get("generated_from") or {}).get("schema_version"),
         "records": len(records),
         "triples": len(mapper.g),
         "entities": mapper.counts,

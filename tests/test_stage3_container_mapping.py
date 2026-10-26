@@ -95,3 +95,10 @@ def test_unmapped_fields_are_reported_and_strict_fails(tmp_path, capsys):
     assert report["unmapped_fields"] == {"structures.mystery_field": 1}
 
     assert map_container(src, out, "--strict") == 1
+
+
+def test_heritagegraph_is_the_default_mapping(container_file, tmp_path):
+    out = tmp_path / "graph.ttl"
+    assert run_cli([container_file, "--base", str(HG), "--out", out]) == 0
+    g = Graph().parse(str(out), format="turtle")
+    assert (HG["struct-krishna-mandir"], RDF.type, HG.ArchitecturalStructure) in g

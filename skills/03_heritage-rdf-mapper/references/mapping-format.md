@@ -32,3 +32,43 @@ Rules that start with the same first-step `node` name within one record reuse th
 ## Safe changes
 
 Adding rules is safe. Changing a `class` or `p` affects the shapes in `../../04_heritage-shacl-validate/assets/shapes/`, so update both and rerun the validation step on your generated `graph.ttl`.
+
+## Container mappings (HeritageGraph-native)
+
+`heritagegraph.yaml` is **generated** by `scripts/generate_mapping.py` from `schemas/HeritageGraph.yaml`; do not edit it. It walks the LinkML Container instead of flat records:
+
+```yaml
+name: heritagegraph
+generated_from: {schema_version: 1.0.1, sha256: <schema checksum>}
+prefixes: {heritageGraph: https://cair-nepal.org/heritagegraph/, crm: ..., ...}
+container:
+  collections:
+    structures:                              # Container slot name
+      class: heritageGraph:ArchitecturalStructure   # the schema's class_uri
+      slots:
+        name: {p: rdfs:label}                       # plain xsd:string literal
+        generated_at_time: {p: prov:generatedAtTime, datatype: xsd:dateTime}
+        managed_by_guthi: {p: heritageGraph:managedByGuthi, ref: true}   # IRI of another entity id
+        existence_status: {p: heritageGraph:existenceStatus, enum: heritageGraph:ExistenceStatus}
+```
+
+- Every item's `id` (CURIE or IRI) is its subject URI. `id` itself maps to `dcterms:identifier` (`xsd:anyURI`).
+- `ref: true` links to the referenced id (a string or an inlined object's `id`).
+- `enum: X` emits the IRI `X#<value>`.
+- Items with a Stage 2 `resolution` also get `skos:exactMatch` (linked) or an `rdfs:comment` review flag (ambiguous).
+- Fields with no slot rule are reported in `unmapped_fields` as `collection.field`.
+
+### Overrides
+
+`assets/mappings/heritagegraph.overrides.yaml` layers hand-written exceptions on the generated output:
+
+```yaml
+collections:
+  structures:
+    class: heritageGraph:ArchitecturalStructure   # optional class replacement
+    slots:
+      note: {p: rdfs:comment}                     # replace a rule
+      was_influenced_by: null                     # suppress a rule
+```
+
+Re-run `generate_mapping.py` after editing. `generate_mapping.py --check` exits 1 when the committed mapping no longer matches the schema and overrides.
