@@ -164,6 +164,77 @@ class Mapper:
                             self.g.add((n, RDF.type, self.q(step["class"])))
                         subj = n
 
+    # -- container mode (HeritageGraph-native) ---------------------------
+    def expand(self, ident):
+        """CURIE, absolute IRI or bare id -> URIRef (bare ids are minted under --base)."""
+        s = str(ident)
+        if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", s):
+            return URIRef(s)
+        prefix, _, local = s.partition(":")
+        if local and prefix in self.prefixes:
+            return URIRef(self.prefixes[prefix] + local)
+        return URIRef(self.base + slugify(s))
+
+    def container_literal(self, value, slot):
+        dt = slot.get("datatype")
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        # No language tags: HeritageGraph shapes demand xsd:string, and rdf:langString fails them.
+        return Literal(str(value), datatype=self.q(dt)) if dt else Literal(str(value))
+
+    def container_values(self, item, key):
+        v = item.get(key)
+        if v is None or v == "":
+            return []
+        return v if isinstance(v, list) else [v]
+
+    def map_container(self, data):
+        """Walk the Container's collections in mapping order. Returns the mapped items."""
+        mapped = []
+        collections = self.m["container"]["collections"]
+        for col, cfg in collections.items():
+            items = data.get(col)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                mapped.append((col, item))
+                subj = self.expand(item["id"])
+                self.g.add((subj, RDF.type, self.q(cfg["class"])))
+                for key, slot in cfg.get("slots", {}).items():
+                    p = self.q(slot["p"])
+                    for val in self.container_values(item, key):
+                        if key == "id":
+                            val = str(subj)
+                        if slot.get("ref"):
+                            ref = val.get("id") if isinstance(val, dict) else val
+                            if ref:
+                                self.g.add((subj, p, self.expand(ref)))
+                        elif slot.get("enum"):
+                            self.g.add((subj, p, URIRef(f"{self.q(slot['enum'])}#{val}")))
+                        else:
+                            self.g.add((subj, p, self.container_literal(val, slot)))
+        return mapped
+
+    def container_unmapped(self, data):
+        """Non-empty collection fields that no slot consumes, as 'collection.field' counts."""
+        counts = {}
+        for col, cfg in self.m["container"]["collections"].items():
+            items = data.get(col)
+            if not isinstance(items, list):
+                continue
+            covered = set(cfg.get("slots", {}))
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                for path in self.leaves({k: v for k, v in item.items() if k not in ("resolution", "evidence")}):
+                    if path.split(".")[0] in covered:
+                        continue
+                    key = f"{col}.{path}"
+                    counts[key] = counts.get(key, 0) + 1
+        return counts
+
     @staticmethod
     def leaves(obj, prefix=""):
         if isinstance(obj, dict):
@@ -255,23 +326,27 @@ def main():
     mapping = yaml.safe_load(open(mapping_path, encoding="utf-8"))
     language = (data.get("source") or {}).get("language")
     mapper = Mapper(mapping, args.base, language)
-    records = data.get("records")
-    if records is None:
-        records = []
-        for col in [
-            "structures", "human_made_objects", "iconographic_objects",
-            "places", "guthis", "festivals", "ritual_events"
-        ]:
-            items = data.get(col, [])
-            if isinstance(items, list):
-                records.extend(items)
-    for rec in records:
-        if isinstance(rec, dict) and "id" in rec:
-            mapper.map_record(rec)
+    if "container" in mapping:
+        records = [item for _, item in mapper.map_container(data)]
+        unmapped = mapper.container_unmapped(data)
+    else:
+        records = data.get("records")
+        if records is None:
+            records = []
+            for col in [
+                "structures", "human_made_objects", "iconographic_objects",
+                "places", "guthis", "festivals", "ritual_events"
+            ]:
+                items = data.get(col, [])
+                if isinstance(items, list):
+                    records.extend(items)
+        for rec in records:
+            if isinstance(rec, dict) and "id" in rec:
+                mapper.map_record(rec)
+        unmapped = mapper.unmapped(records)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     mapper.g.serialize(destination=str(out_path), format="turtle")
-    unmapped = mapper.unmapped(records)
     report = {
         "records": len(records),
         "triples": len(mapper.g),

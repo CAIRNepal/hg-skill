@@ -1,0 +1,20 @@
+# HeritageGraph-native mapping (hand-seeded slice; replaced by generated output in ticket #20).
+# Walks the Stage 1 LinkML Container: each collection maps to a class, each slot to a slot_uri.
+# See references/mapping-format.md ("Container mappings").
+name: heritagegraph
+prefixes:
+  heritageGraph: https://cair-nepal.org/heritagegraph/
+  crm: http://www.cidoc-crm.org/cidoc-crm/
+  dcterms: http://purl.org/dc/terms/
+
+container:
+  collections:
+    structures:
+      class: heritageGraph:ArchitecturalStructure
+      slots:
+        id: {p: dcterms:identifier, datatype: xsd:anyURI}
+        name: {p: rdfs:label}
+        note: {p: crm:P3_has_note}
+        has_current_location: {p: crm:P55_has_current_location, ref: true}
+        existence_status: {p: heritageGraph:existenceStatus, enum: heritageGraph:ExistenceStatus}
+        managed_by_guthi: {p: heritageGraph:managedByGuthi, ref: true}
