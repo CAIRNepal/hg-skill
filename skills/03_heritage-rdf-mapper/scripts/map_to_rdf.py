@@ -214,41 +214,90 @@ class Mapper:
             for item in items:
                 if not isinstance(item, dict) or not item.get("id"):
                     continue
-                mapped.append((col, item))
+                mapped.append(item)
                 subj = self.expand(item["id"])
                 self.g.add((subj, RDF.type, self.q(cfg["class"])))
                 self.container_resolution(subj, item)
                 for key, slot in cfg.get("slots", {}).items():
                     p = self.q(slot["p"])
                     for val in self.container_values(item, key):
-                        if key == "id":
+                        if slot.get("identity") or key == "id":
                             val = str(subj)
                         if slot.get("ref"):
                             ref = val.get("id") if isinstance(val, dict) else val
                             if ref:
                                 self.g.add((subj, p, self.expand(ref)))
                         elif slot.get("enum"):
-                            self.g.add((subj, p, URIRef(f"{self.q(slot['enum'])}#{val}")))
+                            permitted = slot.get("permissible_values")
+                            val_str = str(val).strip()
+                            if (permitted is None or val_str in permitted) and bool(re.fullmatch(r"[A-Za-z0-9_.-]+", val_str)):
+                                self.g.add((subj, p, URIRef(f"{self.q(slot['enum'])}#{val_str}")))
                         else:
                             self.g.add((subj, p, self.container_literal(val, slot)))
         return mapped
 
     def container_unmapped(self, data):
-        """Non-empty collection fields that no slot consumes, as 'collection.field' counts."""
+        """Non-empty collection fields that no slot consumes, as 'collection.field' counts.
+        Also tracks:
+        - unknown collections not declared in mapping or standard metadata
+        - items missing 'id'
+        - unmapped properties inside inlined ref objects (other than 'id')
+        - invalid enum values that could not be triplified
+        """
         counts = {}
-        for col, cfg in self.m["container"]["collections"].items():
+        collections = self.m["container"]["collections"]
+        ignored_top_level = {"id", "source", "metadata", "@context", "evidence", "provenance"}
+
+        # 1. Unknown / undeclared collections
+        for k, val in data.items():
+            if k in collections or k in ignored_top_level:
+                continue
+            for path in self.leaves(val, k):
+                counts[path] = counts.get(path, 0) + 1
+            if not isinstance(val, (dict, list)) and val not in (None, ""):
+                counts[k] = counts.get(k, 0) + 1
+
+        # 2. Declared collections
+        for col, cfg in collections.items():
             items = data.get(col)
             if not isinstance(items, list):
                 continue
-            covered = set(cfg.get("slots", {}))
+            slots_cfg = cfg.get("slots", {})
             for item in items:
                 if not isinstance(item, dict):
                     continue
+                # If item lacks 'id', it cannot be mapped as an entity
+                if not item.get("id"):
+                    counts[f"{col}._missing_id"] = counts.get(f"{col}._missing_id", 0) + 1
+                    for path in self.leaves({k: v for k, v in item.items() if k not in ("resolution", "evidence")}):
+                        key = f"{col}.{path}"
+                        counts[key] = counts.get(key, 0) + 1
+                    continue
+
                 for path in self.leaves({k: v for k, v in item.items() if k not in ("resolution", "evidence")}):
-                    if path.split(".")[0] in covered:
+                    root = path.split(".")[0]
+                    if root not in slots_cfg:
+                        # Completely unmapped slot
+                        counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
                         continue
-                    key = f"{col}.{path}"
-                    counts[key] = counts.get(key, 0) + 1
+
+                    slot = slots_cfg[root]
+                    # If this is an inlined ref object, e.g. path is "has_current_location.extra"
+                    if slot.get("ref") and "." in path:
+                        # only ".id" is consumed by ref
+                        subpath = path[len(root) + 1:]
+                        if subpath != "id":
+                            counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
+                    elif slot.get("enum"):
+                        # Check if enum value was invalid
+                        val = item.get(root)
+                        vals = val if isinstance(val, list) else [val]
+                        permitted = slot.get("permissible_values")
+                        for v in vals:
+                            v_str = str(v).strip() if v is not None else ""
+                            is_valid = (permitted is None or v_str in permitted) and bool(re.fullmatch(r"[A-Za-z0-9_.-]+", v_str))
+                            if not is_valid:
+                                counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
         return counts
 
     @staticmethod
@@ -343,7 +392,7 @@ def main():
     language = (data.get("source") or {}).get("language")
     mapper = Mapper(mapping, args.base, language)
     if "container" in mapping:
-        records = [item for _, item in mapper.map_container(data)]
+        records = mapper.map_container(data)
         unmapped = mapper.container_unmapped(data)
     else:
         records = data.get("records")

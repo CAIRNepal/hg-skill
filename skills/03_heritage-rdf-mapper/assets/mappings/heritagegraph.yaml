@@ -43,6 +43,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -76,6 +77,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -108,6 +110,11 @@ container:
         syncretic_type:
           p: heritageGraph:syncreticType
           enum: heritageGraph:SyncreticType
+          permissible_values:
+          - Equivalence
+          - Appropriation
+          - Fusion
+          - Historical
         used:
           p: prov:used
           ref: true
@@ -119,6 +126,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         generated:
           p: prov:generated
@@ -143,6 +151,7 @@ container:
       slots:
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -168,6 +177,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -205,6 +215,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -233,6 +244,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -254,6 +266,7 @@ container:
       slots:
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         name:
           p: rdfs:label
@@ -292,6 +305,7 @@ container:
           p: heritageGraph:traditionalRole
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         acted_on_behalf_of:
           p: prov:actedOnBehalfOf
@@ -309,6 +323,15 @@ container:
         guthi_type:
           p: heritageGraph:guthiType
           enum: heritageGraph:GuthiType
+          permissible_values:
+          - SiGuthi
+          - JatraGuthi
+          - PujaGuthi
+          - TempleGuthi
+          - NashaGuthi
+          - SanaGuthi
+          - SanGuthi
+          - RajGuthi
         performs_ritual:
           p: heritageGraph:performsRitual
           ref: true
@@ -320,6 +343,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         acted_on_behalf_of:
           p: prov:actedOnBehalfOf
@@ -358,6 +382,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -402,6 +427,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -446,6 +472,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -478,6 +505,26 @@ container:
         ritual_type:
           p: heritageGraph:ritualType
           enum: heritageGraph:RitualType
+          permissible_values:
+          - NityaPuja
+          - NaimittikaPuja
+          - KamyaPuja
+          - Abhisheka
+          - Homa
+          - Bhajan
+          - Yagna
+          - Vrata
+          - Jatra
+          - ChariotProcession
+          - MaskedPerformance
+          - RitualConsecration
+          - ProcessionRitual
+          - InstallationRitual
+          - DeinstallationRitual
+          - ReturningRitual
+          - Circumambulation
+          - RelicTour
+          - ProcessionalMovement
         ritual_on_structure:
           p: crm:P8_took_place_on_or_within
           ref: true
@@ -537,6 +584,7 @@ container:
           p: heritageGraph:routeDescription
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -572,6 +620,26 @@ container:
         ritual_type:
           p: heritageGraph:ritualType
           enum: heritageGraph:RitualType
+          permissible_values:
+          - NityaPuja
+          - NaimittikaPuja
+          - KamyaPuja
+          - Abhisheka
+          - Homa
+          - Bhajan
+          - Yagna
+          - Vrata
+          - Jatra
+          - ChariotProcession
+          - MaskedPerformance
+          - RitualConsecration
+          - ProcessionRitual
+          - InstallationRitual
+          - DeinstallationRitual
+          - ReturningRitual
+          - Circumambulation
+          - RelicTour
+          - ProcessionalMovement
         ritual_on_structure:
           p: crm:P8_took_place_on_or_within
           ref: true
@@ -631,6 +699,7 @@ container:
           p: heritageGraph:routeDescription
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -678,6 +747,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -730,6 +800,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -757,6 +828,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         acted_on_behalf_of:
           p: prov:actedOnBehalfOf
@@ -799,6 +871,7 @@ container:
           datatype: xsd:dateTime
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_influenced_by:
           p: prov:wasInfluencedBy
@@ -826,6 +899,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -881,6 +955,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -899,6 +974,7 @@ container:
       slots:
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         name:
           p: rdfs:label
@@ -957,9 +1033,22 @@ container:
         has_architectural_style:
           p: heritageGraph:hasArchitecturalStyle
           enum: heritageGraph:ArchitecturalStyle
+          permissible_values:
+          - Pagoda
+          - Shikhara
+          - Dome
+          - Chaitya
+          - Stupa
         existence_status:
           p: heritageGraph:existenceStatus
           enum: heritageGraph:ExistenceStatus
+          permissible_values:
+          - Extant
+          - PartiallyExtant
+          - Destroyed
+          - Lost
+          - Hypothetical
+          - Unknown
         last_known_existence_date:
           p: heritageGraph:lastKnownExistenceDate
           datatype: xsd:dateTime
@@ -980,6 +1069,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         participates_in_ritual:
           p: heritageGraph:participatesInRitual
@@ -1029,6 +1119,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         has_condition_assessment:
           p: crm:P34i_was_assessed_by
@@ -1063,6 +1154,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         acted_on_behalf_of:
           p: prov:actedOnBehalfOf
@@ -1091,6 +1183,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -1132,6 +1225,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -1164,8 +1258,14 @@ container:
         has_condition_type:
           p: heritageGraph:hasConditionType
           enum: heritageGraph:ConditionType
+          permissible_values:
+          - Good
+          - Damaged
+          - Ruined
+          - Restored
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1197,8 +1297,15 @@ container:
         date_precision:
           p: heritageGraph:datePrecision
           enum: heritageGraph:DatePrecision
+          permissible_values:
+          - Exact
+          - Year
+          - Decade
+          - Century
+          - Circa
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1224,6 +1331,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1277,6 +1385,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1301,6 +1410,7 @@ container:
           ref: true
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1330,6 +1440,26 @@ container:
         ritual_type:
           p: heritageGraph:ritualType
           enum: heritageGraph:RitualType
+          permissible_values:
+          - NityaPuja
+          - NaimittikaPuja
+          - KamyaPuja
+          - Abhisheka
+          - Homa
+          - Bhajan
+          - Yagna
+          - Vrata
+          - Jatra
+          - ChariotProcession
+          - MaskedPerformance
+          - RitualConsecration
+          - ProcessionRitual
+          - InstallationRitual
+          - DeinstallationRitual
+          - ReturningRitual
+          - Circumambulation
+          - RelicTour
+          - ProcessionalMovement
         ritual_on_structure:
           p: crm:P8_took_place_on_or_within
           ref: true
@@ -1389,6 +1519,7 @@ container:
           p: heritageGraph:routeDescription
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -1416,6 +1547,7 @@ container:
       slots:
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1460,6 +1592,26 @@ container:
         ritual_type:
           p: heritageGraph:ritualType
           enum: heritageGraph:RitualType
+          permissible_values:
+          - NityaPuja
+          - NaimittikaPuja
+          - KamyaPuja
+          - Abhisheka
+          - Homa
+          - Bhajan
+          - Yagna
+          - Vrata
+          - Jatra
+          - ChariotProcession
+          - MaskedPerformance
+          - RitualConsecration
+          - ProcessionRitual
+          - InstallationRitual
+          - DeinstallationRitual
+          - ReturningRitual
+          - Circumambulation
+          - RelicTour
+          - ProcessionalMovement
         ritual_on_structure:
           p: crm:P8_took_place_on_or_within
           ref: true
@@ -1507,6 +1659,7 @@ container:
           p: heritageGraph:routeDescription
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         used:
           p: prov:used
@@ -1545,6 +1698,7 @@ container:
           p: heritageGraph:propositionLiteralValue
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom
@@ -1570,6 +1724,7 @@ container:
           p: crm:P3_has_note
         id:
           p: dcterms:identifier
+          identity: true
           datatype: xsd:anyURI
         was_derived_from:
           p: prov:wasDerivedFrom

@@ -44,13 +44,17 @@ def compact(sv, iri):
 
 def slot_rule(sv, slot):
     rule = {"p": sv.get_uri(slot, expand=False)}
+    if getattr(slot, "identifier", False):
+        rule["identity"] = True
     classes, enums, types = sv.all_classes(), sv.all_enums(), sv.all_types()
     members = [x.range for x in (slot.any_of or [])]
     rng = slot.range or sv.schema.default_range
     if any(m in classes for m in members) or rng in classes:
         rule["ref"] = True
     elif rng in enums:
-        rule["enum"] = sv.get_uri(sv.get_enum(rng), expand=False)
+        enum_obj = sv.get_enum(rng)
+        rule["enum"] = sv.get_uri(enum_obj, expand=False)
+        rule["permissible_values"] = list(enum_obj.permissible_values.keys())
     else:
         uri = sv.get_uri(types[rng], expand=True) if rng in types else None
         dt = compact(sv, uri) if uri else None

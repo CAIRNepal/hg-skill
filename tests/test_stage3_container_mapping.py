@@ -102,3 +102,55 @@ def test_heritagegraph_is_the_default_mapping(container_file, tmp_path):
     assert run_cli([container_file, "--base", str(HG), "--out", out]) == 0
     g = Graph().parse(str(out), format="turtle")
     assert (HG["struct-krishna-mandir"], RDF.type, HG.ArchitecturalStructure) in g
+
+
+def test_inlined_ref_extra_fields_are_reported_unmapped(tmp_path, capsys):
+    data = json.loads(json.dumps(CONTAINER))
+    data["structures"][0]["has_current_location"] = {
+        "id": "heritageGraph:place-patan",
+        "extra_field": "not_triplified",
+    }
+    src = tmp_path / "inlined_extra.json"
+    src.write_text(json.dumps(data), encoding="utf-8")
+
+    out = tmp_path / "out.ttl"
+    assert map_container(src, out) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert "structures.has_current_location.extra_field" in report["unmapped_fields"]
+
+
+def test_items_missing_id_and_unknown_collections_are_reported_unmapped(tmp_path, capsys):
+    data = json.loads(json.dumps(CONTAINER))
+    data["structures"].append({"name": "No ID Temple", "note": "Orphan"})
+    data["unknown_collection"] = [{"id": "heritageGraph:x1", "label": "Dropped"}]
+    src = tmp_path / "missing_id.json"
+    src.write_text(json.dumps(data), encoding="utf-8")
+
+    out = tmp_path / "out.ttl"
+    assert map_container(src, out) == 0
+    report = json.loads(capsys.readouterr().out)
+    unmapped = report["unmapped_fields"]
+    assert "structures._missing_id" in unmapped
+    assert "structures.name" in unmapped
+    assert "unknown_collection.id" in unmapped
+    assert "unknown_collection.label" in unmapped
+
+
+def test_invalid_enum_value_does_not_crash_and_is_reported_unmapped(tmp_path, capsys):
+    data = json.loads(json.dumps(CONTAINER))
+    # 'Partially Extant' contains a space and is not a permissible value (PartiallyExtant is)
+    data["structures"][0]["existence_status"] = "Partially Extant"
+    src = tmp_path / "invalid_enum.json"
+    src.write_text(json.dumps(data), encoding="utf-8")
+
+    out = tmp_path / "out.ttl"
+    # Should not crash on serialize, exit 0 without --strict, and report existence_status in unmapped
+    assert map_container(src, out) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert "structures.existence_status" in report["unmapped_fields"]
+
+    g = Graph().parse(str(out), format="turtle")
+    s = HG["struct-krishna-mandir"]
+    assert not list(g.objects(s, HG.existenceStatus))
+    assert map_container(src, out, "--strict") == 1
+

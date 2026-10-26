@@ -59,9 +59,11 @@ def test_class_and_slot_uris_match_the_ontology(mapping):
     slots = structures["slots"]
     assert slots["managed_by_guthi"] == {"p": "heritageGraph:managedByGuthi", "ref": True}
     assert slots["has_current_location"] == {"p": "crm:P55_has_current_location", "ref": True}
-    assert slots["existence_status"] == {"p": "heritageGraph:existenceStatus", "enum": "heritageGraph:ExistenceStatus"}
+    assert slots["existence_status"]["p"] == "heritageGraph:existenceStatus"
+    assert slots["existence_status"]["enum"] == "heritageGraph:ExistenceStatus"
+    assert "Extant" in slots["existence_status"]["permissible_values"]
     assert slots["generated_at_time"] == {"p": "prov:generatedAtTime", "datatype": "xsd:dateTime"}
-    assert slots["id"] == {"p": "dcterms:identifier", "datatype": "xsd:anyURI"}
+    assert slots["id"] == {"p": "dcterms:identifier", "datatype": "xsd:anyURI", "identity": True}
     assert slots["name"] == {"p": "rdfs:label"}
 
 
