@@ -1,0 +1,10 @@
+# Hand-written exceptions applied on top of the generated heritagegraph.yaml.
+# Shape:
+#   collections:
+#     <collection>:
+#       class: <curie>            # optional: replace the class
+#       slots:
+#         <slot>: {p: ..., ...}   # replace a slot rule
+#         <slot>: null            # suppress a slot
+# Re-run scripts/generate_mapping.py after editing. Prefer fixing the schema upstream.
+collections: {}
