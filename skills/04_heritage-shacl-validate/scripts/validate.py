@@ -24,6 +24,7 @@ except ImportError:
     RunWorkspace = None
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
+HG_NS = "https://cair-nepal.org/heritagegraph/"
 
 
 def short(term):
@@ -34,12 +35,31 @@ def short(term):
     return s
 
 
+def shape_coverage(data, shapes):
+    """How many data nodes each targetClass shape actually matched. A shape that matches nothing
+    validated nothing, so coverage is what makes a CONFORMS verdict meaningful."""
+    typed = {}
+    for s, o in data.subject_objects(RDF.type):
+        typed.setdefault(o, set()).add(s)
+    targets = {}
+    for shape, cls in shapes.subject_objects(SH.targetClass):
+        targets.setdefault(shape, set()).update(typed.get(cls, set()))
+    matched = {short(shape): len(nodes) for shape, nodes in targets.items() if nodes}
+    return {
+        "shapes_total": len(targets),
+        "shapes_matched": len(matched),
+        "matched": dict(sorted(matched.items())),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description="Validate an RDF graph against SHACL shapes.")
     ap.add_argument("graph", nargs="?", default=None, help="Path to graph Turtle file or run directory")
     ap.add_argument("--run-dir", default=None, help="Pipeline run directory")
     ap.add_argument("--shapes", default=None, help="Path to SHACL shapes file")
     ap.add_argument("--report", default=None, help="Path to output validation JSON report")
+    ap.add_argument("--allow-crm-only", action="store_true",
+                    help="Accept a graph with no heritageGraph: instances (CIDOC-CRM alternate mapping)")
     args = ap.parse_args()
 
     ws = None
@@ -108,7 +128,16 @@ def main():
         })
     violations.sort(key=lambda v: (v["focusNode"], v["path"] or "", v["constraint"]))
 
-    summary = {"conforms": bool(conforms), "triples": len(data), "violations": violations}
+    coverage = shape_coverage(data, shapes)
+    hg_instances = sum(1 for _, o in data.subject_objects(RDF.type) if str(o).startswith(HG_NS))
+    vacuous = coverage["shapes_matched"] == 0 or (hg_instances == 0 and not args.allow_crm_only)
+    conforms = bool(conforms) and not vacuous
+
+    summary = {
+        "conforms": conforms, "vacuous": vacuous, "triples": len(data),
+        "heritagegraph_instances": hg_instances, "shape_coverage": coverage,
+        "violations": violations,
+    }
     if report_path:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         with open(report_path, "w", encoding="utf-8") as fh:
@@ -119,15 +148,21 @@ def main():
             4, "validate",
             status="success" if conforms else "violations",
             metrics={
-                "conforms": bool(conforms),
+                "conforms": conforms,
+                "vacuous": vacuous,
                 "triples": len(data),
-                "violations_count": len(violations)
+                "violations_count": len(violations),
+                "shapes_matched": coverage["shapes_matched"],
             }
         )
 
     if conforms:
-        print(f"CONFORMS ({len(data)} triples checked)")
+        print(f"CONFORMS ({len(data)} triples checked, {coverage['shapes_matched']} shapes matched)")
         return 0
+    if vacuous:
+        print("FAILS: vacuous graph - no heritageGraph: instances matched any shape; "
+              "nothing was validated (use --allow-crm-only for the CIDOC-CRM alternate mapping)")
+        return 1
     print(f"FAILS: {len(violations)} violation(s)")
     for v in violations:
         print(f"  - {v['focusNode']}  [{v['constraint']}]  {v['message']}")
