@@ -6,7 +6,7 @@ across stages 00_preprocessed.json through 04_shacl_report.json in manifest.json
 Aligned with ADR-0003 and GLOSSARY.md.
 
 Usage:
-  python run_pipeline.py [--run-dir DIR] [input_path] [--ontology cidoc-crm] [--base URI]
+  python run_pipeline.py [--run-dir DIR] [input_path] [--ontology heritagegraph|cidoc-crm] [--base URI]
 """
 import argparse
 import json
@@ -45,7 +45,7 @@ def run_subcommand(cmd):
 def run_pipeline(
     input_path: Optional[Union[str, Path]] = None,
     run_dir: Optional[Union[str, Path]] = None,
-    ontology: str = "cidoc-crm",
+    ontology: str = "heritagegraph",
     base_uri: str = "https://cair-nepal.org/heritagegraph/",
     shapes: Optional[Union[str, Path]] = None,
     interactive: bool = False,
@@ -125,11 +125,14 @@ def run_pipeline(
     if not shapes_path.exists():
         shapes_path = REPO_ROOT / "schemas" / "HeritageGraph.shacl.ttl"
 
-    rc = run_subcommand([
+    validate_cmd = [
         sys.executable, validator_dir / "scripts" / "validate.py",
         "--run-dir", str(ws.run_dir),
         "--shapes", str(shapes_path)
-    ])
+    ]
+    if ontology != "heritagegraph":
+        validate_cmd.append("--allow-crm-only")  # alternate mappings emit no heritageGraph: instances
+    rc = run_subcommand(validate_cmd)
 
     # Finalize workspace manifest
     p4 = ws.artifact_path(4)
@@ -157,7 +160,8 @@ def main():
     ap = argparse.ArgumentParser(description="Orchestrate HeritageGraph transformation pipeline.")
     ap.add_argument("input", nargs="?", default=None, help="Input source file or run directory")
     ap.add_argument("--run-dir", default=None, help="Pipeline run directory")
-    ap.add_argument("--ontology", default="cidoc-crm", help="Target ontology mapping (default: cidoc-crm)")
+    ap.add_argument("--ontology", default="heritagegraph",
+                    help="Target ontology mapping (default: heritagegraph; alternate: cidoc-crm)")
     ap.add_argument("--base", default="https://cair-nepal.org/heritagegraph/", help="Base URI for local minting")
     ap.add_argument("--shapes", default=None, help="Path to SHACL shapes file")
     ap.add_argument("--interactive", "-i", action="store_true", help="Launch interactive human review in Stage 2")

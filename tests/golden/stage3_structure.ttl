@@ -1,0 +1,13 @@
+@prefix crm: <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix heritageGraph: <https://cair-nepal.org/heritagegraph/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+heritageGraph:struct-krishna-mandir a heritageGraph:ArchitecturalStructure ;
+    rdfs:label "कृष्ण मन्दिर (Krishna Mandir)" ;
+    dcterms:identifier "https://cair-nepal.org/heritagegraph/struct-krishna-mandir"^^xsd:anyURI ;
+    crm:P3_has_note "Stone temple in Patan Durbar Square" ;
+    crm:P55_has_current_location heritageGraph:place-patan ;
+    heritageGraph:existenceStatus <https://cair-nepal.org/heritagegraph/ExistenceStatus#Extant> .
+

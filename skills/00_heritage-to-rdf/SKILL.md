@@ -58,8 +58,8 @@ All pipeline artifacts are scoped within an isolated run workspace: `runs/<run_i
   ```bash
   python skills/03_heritage-rdf-mapper/scripts/map_to_rdf.py --run-dir runs/<run_id> [--mapping <file>]
   ```
-- Output: `03_graph.ttl`.
-- **Completion Gate**: Valid RDF syntax verified and triple count recorded in `manifest.json`.
+- Output: `03_graph.ttl`, typed natively with `heritageGraph:` classes (default mapping `heritagegraph`, generated from the LinkML schema; `--mapping assets/mappings/cidoc-crm.yaml` or `run_pipeline.py --ontology cidoc-crm` for the CRM alternate).
+- **Completion Gate**: Valid RDF syntax verified; mapping name, schema version and triple count recorded in `manifest.json`.
 
 ### 5. SHACL Quality Gate (Stage 4)
 - Follow [04_heritage-shacl-validate](../04_heritage-shacl-validate/SKILL.md).

@@ -73,3 +73,9 @@ A staged artifact (`02_review_queue.json`) containing unlinked, ambiguous, or lo
 ### Curated Gazetteer
 A project gazetteer (`curated-links.csv`) capturing approved entity resolutions confirmed by human curators to compound institutional knowledge across future pipeline runs.
 
+
+### Native HeritageGraph Mapping
+The default Stage 3 mapping (`skills/03_heritage-rdf-mapper/assets/mappings/heritagegraph.yaml`), **generated** from `schemas/HeritageGraph.yaml` by `generate_mapping.py` so that `graph.ttl` is typed with the ontology's own `class_uri` / `slot_uri`. Hand-written exceptions go in `heritagegraph.overrides.yaml`. The CIDOC-CRM mapping (`cidoc-crm.yaml`) is the optional alternate. See ADR-0004.
+
+### Vacuous Pass
+A Quality Gate result of `CONFORMS` that validated nothing because no `heritageGraph:` instance matched any SHACL shape. Stage 4 fails it (`"vacuous": true`) and reports per-shape coverage.

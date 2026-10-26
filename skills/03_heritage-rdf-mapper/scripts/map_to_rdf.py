@@ -164,6 +164,142 @@ class Mapper:
                             self.g.add((n, RDF.type, self.q(step["class"])))
                         subj = n
 
+    # -- container mode (HeritageGraph-native) ---------------------------
+    def expand(self, ident):
+        """CURIE, absolute IRI or bare id -> URIRef (bare ids are minted under --base)."""
+        s = str(ident)
+        if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", s):
+            return URIRef(s)
+        prefix, _, local = s.partition(":")
+        if local and prefix in self.prefixes:
+            return URIRef(self.prefixes[prefix] + local)
+        return URIRef(self.base + slugify(s))
+
+    def container_resolution(self, subj, item):
+        """Stage 2 results never replace the entity URI: linked -> skos:exactMatch to the external
+        URI; ambiguous -> review comment; local -> nothing (the id already is the local URI)."""
+        res = item.get("resolution")
+        if not isinstance(res, dict):
+            return
+        status = res.get("status") or ("linked" if res.get("uri") else "local")
+        if status not in self.counts:
+            return
+        self.counts[status] += 1
+        if status == "linked" and res.get("uri") and URIRef(res["uri"]) != subj:
+            self.g.add((subj, SKOS.exactMatch, URIRef(res["uri"])))
+        elif status == "ambiguous":
+            self.g.add((subj, RDFS.comment, Literal("Entity resolution was ambiguous; needs human review.")))
+
+    def container_literal(self, value, slot):
+        dt = slot.get("datatype")
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        # No language tags: HeritageGraph shapes demand xsd:string, and rdf:langString fails them.
+        return Literal(str(value), datatype=self.q(dt)) if dt else Literal(str(value))
+
+    def container_values(self, item, key):
+        v = item.get(key)
+        if v is None or v == "":
+            return []
+        return v if isinstance(v, list) else [v]
+
+    def map_container(self, data):
+        """Walk the Container's collections in mapping order. Returns the mapped items."""
+        mapped = []
+        collections = self.m["container"]["collections"]
+        for col, cfg in collections.items():
+            items = data.get(col)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                mapped.append(item)
+                subj = self.expand(item["id"])
+                self.g.add((subj, RDF.type, self.q(cfg["class"])))
+                self.container_resolution(subj, item)
+                for key, slot in cfg.get("slots", {}).items():
+                    p = self.q(slot["p"])
+                    for val in self.container_values(item, key):
+                        if slot.get("identity") or key == "id":
+                            val = str(subj)
+                        if slot.get("ref"):
+                            ref = val.get("id") if isinstance(val, dict) else val
+                            if ref:
+                                self.g.add((subj, p, self.expand(ref)))
+                        elif slot.get("enum"):
+                            permitted = slot.get("permissible_values")
+                            val_str = str(val).strip()
+                            if (permitted is None or val_str in permitted) and bool(re.fullmatch(r"[A-Za-z0-9_.-]+", val_str)):
+                                self.g.add((subj, p, URIRef(f"{self.q(slot['enum'])}#{val_str}")))
+                        else:
+                            self.g.add((subj, p, self.container_literal(val, slot)))
+        return mapped
+
+    def container_unmapped(self, data):
+        """Non-empty collection fields that no slot consumes, as 'collection.field' counts.
+        Also tracks:
+        - unknown collections not declared in mapping or standard metadata
+        - items missing 'id'
+        - unmapped properties inside inlined ref objects (other than 'id')
+        - invalid enum values that could not be triplified
+        """
+        counts = {}
+        collections = self.m["container"]["collections"]
+        ignored_top_level = {"id", "source", "metadata", "@context", "evidence", "provenance"}
+
+        # 1. Unknown / undeclared collections
+        for k, val in data.items():
+            if k in collections or k in ignored_top_level:
+                continue
+            for path in self.leaves(val, k):
+                counts[path] = counts.get(path, 0) + 1
+            if not isinstance(val, (dict, list)) and val not in (None, ""):
+                counts[k] = counts.get(k, 0) + 1
+
+        # 2. Declared collections
+        for col, cfg in collections.items():
+            items = data.get(col)
+            if not isinstance(items, list):
+                continue
+            slots_cfg = cfg.get("slots", {})
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                # If item lacks 'id', it cannot be mapped as an entity
+                if not item.get("id"):
+                    counts[f"{col}._missing_id"] = counts.get(f"{col}._missing_id", 0) + 1
+                    for path in self.leaves({k: v for k, v in item.items() if k not in ("resolution", "evidence")}):
+                        key = f"{col}.{path}"
+                        counts[key] = counts.get(key, 0) + 1
+                    continue
+
+                for path in self.leaves({k: v for k, v in item.items() if k not in ("resolution", "evidence")}):
+                    root = path.split(".")[0]
+                    if root not in slots_cfg:
+                        # Completely unmapped slot
+                        counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
+                        continue
+
+                    slot = slots_cfg[root]
+                    # If this is an inlined ref object, e.g. path is "has_current_location.extra"
+                    if slot.get("ref") and "." in path:
+                        # only ".id" is consumed by ref
+                        subpath = path[len(root) + 1:]
+                        if subpath != "id":
+                            counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
+                    elif slot.get("enum"):
+                        # Check if enum value was invalid
+                        val = item.get(root)
+                        vals = val if isinstance(val, list) else [val]
+                        permitted = slot.get("permissible_values")
+                        for v in vals:
+                            v_str = str(v).strip() if v is not None else ""
+                            is_valid = (permitted is None or v_str in permitted) and bool(re.fullmatch(r"[A-Za-z0-9_.-]+", v_str))
+                            if not is_valid:
+                                counts[f"{col}.{path}"] = counts.get(f"{col}.{path}", 0) + 1
+        return counts
+
     @staticmethod
     def leaves(obj, prefix=""):
         if isinstance(obj, dict):
@@ -238,7 +374,7 @@ def main():
 
     mapping_path = args.mapping
     if not mapping_path:
-        default_map = Path(__file__).resolve().parent.parent / "assets" / "mappings" / "cidoc-crm.yaml"
+        default_map = Path(__file__).resolve().parent.parent / "assets" / "mappings" / "heritagegraph.yaml"
         if default_map.exists():
             mapping_path = str(default_map)
         else:
@@ -255,24 +391,30 @@ def main():
     mapping = yaml.safe_load(open(mapping_path, encoding="utf-8"))
     language = (data.get("source") or {}).get("language")
     mapper = Mapper(mapping, args.base, language)
-    records = data.get("records")
-    if records is None:
-        records = []
-        for col in [
-            "structures", "human_made_objects", "iconographic_objects",
-            "places", "guthis", "festivals", "ritual_events"
-        ]:
-            items = data.get(col, [])
-            if isinstance(items, list):
-                records.extend(items)
-    for rec in records:
-        if isinstance(rec, dict) and "id" in rec:
-            mapper.map_record(rec)
+    if "container" in mapping:
+        records = mapper.map_container(data)
+        unmapped = mapper.container_unmapped(data)
+    else:
+        records = data.get("records")
+        if records is None:
+            records = []
+            for col in [
+                "structures", "human_made_objects", "iconographic_objects",
+                "places", "guthis", "festivals", "ritual_events"
+            ]:
+                items = data.get(col, [])
+                if isinstance(items, list):
+                    records.extend(items)
+        for rec in records:
+            if isinstance(rec, dict) and "id" in rec:
+                mapper.map_record(rec)
+        unmapped = mapper.unmapped(records)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     mapper.g.serialize(destination=str(out_path), format="turtle")
-    unmapped = mapper.unmapped(records)
     report = {
+        "mapping": mapping.get("name"),
+        "schema_version": (mapping.get("generated_from") or {}).get("schema_version"),
         "records": len(records),
         "triples": len(mapper.g),
         "entities": mapper.counts,
