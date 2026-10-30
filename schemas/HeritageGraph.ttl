@@ -11,6 +11,7 @@
 @prefix geo: <http://www.opengis.net/ont/geosparql#> .
 @prefix heritageGraph: <https://cair-nepal.org/heritagegraph/> .
 @prefix linkml: <https://w3id.org/linkml/> .
+@prefix lux: <https://lux.collections.yale.edu/data/concept/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix pav: <http://purl.org/pav/> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
@@ -560,7 +561,8 @@ heritageGraph:Stupa a owl:Class ;
     owl:disjointWith heritageGraph:Chaitya ;
     skos:definition "Buddhist dome-shaped reliquary shrine with circumambulation and ritual activation (e.g., Boudhanath, Swayambhunath)."@en ;
     skos:exactMatch aat:300007576,
-        wikidata:Q180987 ;
+        wikidata:Q180987,
+        lux:ace0afad-05b1-4e5c-8aeb-09b5b10668e0 ;
     skos:inScheme heritageGraph:schema .
 
 heritageGraph:ThirtyTwoPerfectionsCriterion a owl:Class ;
@@ -760,6 +762,8 @@ heritageGraph:Chaitya a owl:Class ;
     rdfs:label "Chaitya"@en ;
     rdfs:subClassOf heritageGraph:ReligiousStructure ;
     skos:definition "Buddhist votive shrine (chaitya); votive stupa form found across the Kathmandu Valley."@en ;
+    skos:exactMatch aat:300007577,
+        wikidata:Q1059039 ;
     skos:inScheme heritageGraph:schema .
 
 heritageGraph:Murti a owl:Class ;

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 from rdflib import Graph, Literal, Namespace, URIRef
-from rdflib.namespace import DCTERMS, RDF, RDFS, SKOS, XSD
+from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMMON_DIR = REPO_ROOT / "skills" / "common"
@@ -33,6 +33,19 @@ except ImportError:
 
 BUILTIN_PREFIXES = {
     "rdf": str(RDF), "rdfs": str(RDFS), "xsd": str(XSD), "skos": str(SKOS), "dcterms": str(DCTERMS),
+    "owl": str(OWL),
+}
+
+MATCH_TYPE_PREDICATES = {
+    "exact": SKOS.exactMatch,
+    "exactmatch": SKOS.exactMatch,
+    "close": SKOS.closeMatch,
+    "closematch": SKOS.closeMatch,
+    "broad": SKOS.broadMatch,
+    "broadmatch": SKOS.broadMatch,
+    "narrow": SKOS.narrowMatch,
+    "narrowmatch": SKOS.narrowMatch,
+    "sameas": OWL.sameAs,
 }
 
 
@@ -186,7 +199,9 @@ class Mapper:
             return
         self.counts[status] += 1
         if status == "linked" and res.get("uri") and URIRef(res["uri"]) != subj:
-            self.g.add((subj, SKOS.exactMatch, URIRef(res["uri"])))
+            mtype = str(res.get("match_type") or "exact").lower().strip()
+            pred = MATCH_TYPE_PREDICATES.get(mtype, SKOS.exactMatch)
+            self.g.add((subj, pred, URIRef(res["uri"])))
         elif status == "ambiguous":
             self.g.add((subj, RDFS.comment, Literal("Entity resolution was ambiguous; needs human review.")))
 

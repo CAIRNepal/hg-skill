@@ -29,10 +29,12 @@ def load_gazetteers(path):
         with open(f, encoding="utf-8", newline="") as fh:
             for row in csv.DictReader(fh):
                 labels = [row["label"]] + [a for a in (row.get("alt_labels") or "").split("|") if a]
+                match_type = row.get("match_type") or "exact"
                 for lab in labels:
                     index.setdefault(fold(lab), []).append(
                         {"uri": row["uri"], "label": row["label"], "kind": row.get("kind", ""),
-                         "context": row.get("context", ""), "gazetteer": f.name})
+                         "context": row.get("context", ""), "gazetteer": f.name,
+                         "match_type": match_type})
     return index
 
 

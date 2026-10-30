@@ -116,6 +116,24 @@ def fetch_candidates(
         except Exception:
             pass
 
+    # 4. Query Yale LUX
+    try:
+        from lookup_lux import query_lux
+        lux_hits = query_lux(label, kind=kind, limit=limit, timeout=4)
+        for h in lux_hits:
+            uri = h["uri"]
+            if uri not in seen_uris:
+                candidates.append({
+                    "uri": uri,
+                    "label": h.get("label", label),
+                    "source": "lux",
+                    "description": h.get("description", ""),
+                    "confidence": h.get("confidence", 0.85),
+                })
+                seen_uris.add(uri)
+    except Exception:
+        pass
+
     return candidates
 
 
@@ -161,6 +179,7 @@ def resolve_container_entities(
                     "source": same_kind[0].get("gazetteer", "gazetteer"),
                     "confidence": 0.95,
                     "status": "linked",
+                    "match_type": same_kind[0].get("match_type", "exact"),
                     "rationale": f"Exact gazetteer match for '{label}'"
                 }
                 counts["linked"] += 1
@@ -207,6 +226,7 @@ def append_to_curated_gazetteer(
     kind: str,
     context: str = "",
     alt_labels: str = "",
+    match_type: str = "exact",
 ) -> None:
     """Append a human-confirmed mapping into the curated links gazetteer CSV."""
     curated_csv_path.parent.mkdir(parents=True, exist_ok=True)
@@ -214,8 +234,8 @@ def append_to_curated_gazetteer(
     with open(curated_csv_path, "a", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         if write_header:
-            writer.writerow(["uri", "label", "alt_labels", "kind", "context"])
-        writer.writerow([uri, label, alt_labels, kind, context])
+            writer.writerow(["uri", "label", "alt_labels", "kind", "context", "match_type"])
+        writer.writerow([uri, label, alt_labels, kind, context, match_type])
 
 
 def interactive_review_session(
@@ -297,6 +317,28 @@ def interactive_review_session(
             print("      Unrecognized choice; skipped.")
             continue
 
+        # Match degree prompt for external resolutions
+        selected_match_type = "exact"
+        save_gaz_preempted = None
+        if curated_csv_path and selected_uri != item["current_uri"]:
+            try:
+                m_choice = input("      Match type [1:exact (default), 2:close, 3:broad, 4:narrow, 5:sameAs]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                m_choice = "exact"
+
+            if m_choice in ("y", "yes", "n", "no"):
+                selected_match_type = "exact"
+                save_gaz_preempted = m_choice
+            else:
+                m_map = {
+                    "1": "exact", "exact": "exact", "exactmatch": "exact", "": "exact",
+                    "2": "close", "close": "close", "closematch": "close",
+                    "3": "broad", "broad": "broad", "broadmatch": "broad",
+                    "4": "narrow", "narrow": "narrow", "narrowmatch": "narrow",
+                    "5": "sameas", "sameas": "sameAs",
+                }
+                selected_match_type = m_map.get(m_choice, "exact")
+
         # Apply choice to resolved data
         target_entity = id_map.get(item["id"])
         if target_entity:
@@ -305,25 +347,30 @@ def interactive_review_session(
                 "source": selected_source,
                 "confidence": 1.0,
                 "status": "linked" if "cair-nepal.org" not in selected_uri else "local",
+                "match_type": selected_match_type,
                 "rationale": f"Verified by human curator for '{item['label']}'",
             }
             curator_decisions += 1
             resolved_ids.add(item["id"])
-            print(f"      -> Resolved to: {selected_uri}")
+            print(f"      -> Resolved to: {selected_uri} ({selected_match_type})")
 
             # Offer to save into curated-links.csv
             if curated_csv_path and selected_uri != item["current_uri"]:
-                try:
-                    save_gaz = input("      Save this mapping into curated-links.csv? [Y/n]: ").strip().lower()
-                except (EOFError, KeyboardInterrupt):
-                    save_gaz = "y"
-                if save_gaz != "n":
+                if save_gaz_preempted is not None:
+                    save_gaz = save_gaz_preempted
+                else:
+                    try:
+                        save_gaz = input("      Save this mapping into curated-links.csv? [Y/n]: ").strip().lower()
+                    except (EOFError, KeyboardInterrupt):
+                        save_gaz = "y"
+                if save_gaz not in ("n", "no"):
                     append_to_curated_gazetteer(
                         curated_csv_path=curated_csv_path,
                         uri=selected_uri,
                         label=item["label"],
                         kind=item["kind"],
                         context=item.get("context", ""),
+                        match_type=selected_match_type,
                     )
                     print(f"      -> Saved to {curated_csv_path.name}")
 
