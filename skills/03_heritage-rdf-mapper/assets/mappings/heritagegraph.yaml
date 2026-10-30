@@ -4,7 +4,7 @@
 name: heritagegraph
 generated_from:
   schema_version: 1.0.1
-  sha256: 2a3736bddb5a4631841424446bc2711052906e0007cf6219ac6e249a5a61b883
+  sha256: b8e303e89f770c0b5d82e41f22aa8e7ce186d8bdfd310052354daec12de1082a
 prefixes:
   heritageGraph: https://cair-nepal.org/heritagegraph/
   rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
@@ -17,6 +17,7 @@ prefixes:
   time: http://www.w3.org/2006/time#
   aat: http://vocab.getty.edu/aat/
   wikidata: http://www.wikidata.org/entity/
+  lux: https://lux.collections.yale.edu/data/concept/
   schema: http://schema.org/
   dbo: http://dbpedia.org/ontology/
   prov: http://www.w3.org/ns/prov#

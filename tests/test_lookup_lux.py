@@ -69,3 +69,4 @@ def test_fetch_candidates_includes_lux(monkeypatch):
 
     candidates = fetch_candidates(label="Wood carving", kind="technique", query_network=True)
     assert any(c["uri"] == "https://lux.collections.yale.edu/data/concept/test-wood" and c["source"] == "lux" for c in candidates)
+
