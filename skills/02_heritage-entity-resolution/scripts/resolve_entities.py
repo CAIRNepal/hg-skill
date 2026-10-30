@@ -116,6 +116,24 @@ def fetch_candidates(
         except Exception:
             pass
 
+    # 4. Query Yale LUX
+    try:
+        from lookup_lux import query_lux
+        lux_hits = query_lux(label, kind=kind, limit=limit, timeout=4)
+        for h in lux_hits:
+            uri = h["uri"]
+            if uri not in seen_uris:
+                candidates.append({
+                    "uri": uri,
+                    "label": h.get("label", label),
+                    "source": "lux",
+                    "description": h.get("description", ""),
+                    "confidence": h.get("confidence", 0.85),
+                })
+                seen_uris.add(uri)
+    except Exception:
+        pass
+
     return candidates
 
 
