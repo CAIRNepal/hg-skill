@@ -173,6 +173,63 @@ def test_interactive_skip(temp_run_env, monkeypatch):
     assert "curator" not in struct["resolution"]["source"]
 
 
+def test_interactive_graded_match_and_gazetteer_persistence(temp_run_env, monkeypatch):
+    ws = temp_run_env
+    gaz_dir = temp_run_env.run_dir / "gazetteers"
+    gaz_dir.mkdir(parents=True, exist_ok=True)
+    curated_csv = gaz_dir / "curated-links.csv"
+
+    extracted_data = {
+        "id": "heritageGraph:batch-test-graded",
+        "structures": [
+            {
+                "id": "heritageGraph:struct-graded-01",
+                "name": "Nyatapola Shikhar Temple",
+                "note": "Famous multi-roofed structure"
+            }
+        ]
+    }
+    ws.artifact_path(1).write_text(json.dumps(extracted_data), encoding="utf-8")
+
+    # Mock candidate search to return a mock candidate
+    def mock_fetch_candidates(label, kind, context="", gazetteers_dir=None, query_network=True):
+        return [{
+            "uri": "http://vocab.getty.edu/aat/300007595",
+            "source": "getty-aat",
+            "description": "temples (buildings)"
+        }]
+
+    monkeypatch.setattr("resolve_entities.fetch_candidates", mock_fetch_candidates)
+
+    # Curator selects option 1, then chooses match type '3' (broad), then answers 'y' to save to gazetteer
+    inputs = iter(["1", "3", "y"])
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(inputs))
+
+    rc = run_cli(resolve_main, [
+        "--run-dir", str(ws.run_dir),
+        "--interactive",
+        "--gazetteers", str(gaz_dir),
+        "--no-network"
+    ])
+    assert rc == 0
+
+    with open(ws.artifact_path(2), encoding="utf-8") as f:
+        resolved = json.load(f)
+
+    struct = resolved["structures"][0]
+    assert struct["resolution"]["status"] == "linked"
+    assert struct["resolution"]["match_type"] == "broad"
+    assert struct["resolution"]["uri"] == "http://vocab.getty.edu/aat/300007595"
+
+    # Verify curated-links.csv contains match_type 'broad'
+    assert curated_csv.exists()
+    with open(curated_csv, encoding="utf-8", newline="") as f:
+        reader = list(csv.DictReader(f))
+    assert len(reader) == 1
+    assert reader[0]["label"] == "Nyatapola Shikhar Temple"
+    assert reader[0]["match_type"] == "broad"
+
+
 def run_cli(main_fn, args_list):
     orig = sys.argv
     try:
