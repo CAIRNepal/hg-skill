@@ -161,6 +161,7 @@ def resolve_container_entities(
                     "source": same_kind[0].get("gazetteer", "gazetteer"),
                     "confidence": 0.95,
                     "status": "linked",
+                    "match_type": same_kind[0].get("match_type", "exact"),
                     "rationale": f"Exact gazetteer match for '{label}'"
                 }
                 counts["linked"] += 1

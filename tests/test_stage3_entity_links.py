@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from rdflib import Graph, Literal, Namespace, RDF, RDFS, URIRef
-from rdflib.namespace import SKOS
+from rdflib.namespace import OWL, SKOS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STAGE3_DIR = REPO_ROOT / "skills" / "03_heritage-rdf-mapper" / "scripts"
@@ -93,3 +93,28 @@ def test_entity_counts_and_determinism(tmp_path, capsys):
     first = (tmp_path / "graph.ttl").read_bytes()
     run(tmp_path, RESOLVED, capsys)
     assert (tmp_path / "graph.ttl").read_bytes() == first
+
+
+def test_graded_skos_and_identity_mappings(tmp_path, capsys):
+    data = {
+        "id": "heritageGraph:batch-resolved-graded",
+        "guthis": [
+            {"id": "heritageGraph:guthi-exact", "name": "Exact Guthi",
+             "resolution": {"uri": "http://www.wikidata.org/entity/Q1", "status": "linked", "match_type": "exact"}},
+            {"id": "heritageGraph:guthi-close", "name": "Close Guthi",
+             "resolution": {"uri": "http://www.wikidata.org/entity/Q2", "status": "linked", "match_type": "close"}},
+            {"id": "heritageGraph:guthi-broad", "name": "Broad Guthi",
+             "resolution": {"uri": "http://www.wikidata.org/entity/Q3", "status": "linked", "match_type": "broad"}},
+            {"id": "heritageGraph:guthi-narrow", "name": "Narrow Guthi",
+             "resolution": {"uri": "http://www.wikidata.org/entity/Q4", "status": "linked", "match_type": "narrow"}},
+            {"id": "heritageGraph:guthi-sameas", "name": "SameAs Guthi",
+             "resolution": {"uri": "http://www.wikidata.org/entity/Q5", "status": "linked", "match_type": "sameAs"}},
+        ]
+    }
+    g, _ = run(tmp_path, data, capsys)
+    assert (HG["guthi-exact"], SKOS.exactMatch, URIRef("http://www.wikidata.org/entity/Q1")) in g
+    assert (HG["guthi-close"], SKOS.closeMatch, URIRef("http://www.wikidata.org/entity/Q2")) in g
+    assert (HG["guthi-broad"], SKOS.broadMatch, URIRef("http://www.wikidata.org/entity/Q3")) in g
+    assert (HG["guthi-narrow"], SKOS.narrowMatch, URIRef("http://www.wikidata.org/entity/Q4")) in g
+    assert (HG["guthi-sameas"], OWL.sameAs, URIRef("http://www.wikidata.org/entity/Q5")) in g
+
