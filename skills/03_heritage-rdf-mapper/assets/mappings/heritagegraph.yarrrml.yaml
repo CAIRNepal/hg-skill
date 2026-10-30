@@ -1,0 +1,1396 @@
+# GENERATED YARRRML mapping by scripts/generate_mapping.py from schemas/HeritageGraph.yaml.
+# DO NOT EDIT: see references/mapping-format.md.
+prefixes:
+  heritageGraph: https://cair-nepal.org/heritagegraph/
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  owl: http://www.w3.org/2002/07/owl#
+  xsd: http://www.w3.org/2001/XMLSchema#
+  skos: http://www.w3.org/2004/02/skos/core#
+  dcterms: http://purl.org/dc/terms/
+  geo: http://www.opengis.net/ont/geosparql#
+  time: http://www.w3.org/2006/time#
+  aat: http://vocab.getty.edu/aat/
+  wikidata: http://www.wikidata.org/entity/
+  lux: https://lux.collections.yale.edu/data/concept/
+  schema: http://schema.org/
+  dbo: http://dbpedia.org/ontology/
+  prov: http://www.w3.org/ns/prov#
+  crm: http://www.cidoc-crm.org/cidoc-crm/
+  crmsci: http://www.cidoc-crm.org/extensions/crmsci/
+  crminf: http://www.cidoc-crm.org/extensions/crminf/
+  rico: https://www.ica.org/standards/RiC/ontology#
+  bibo: http://purl.org/ontology/bibo/
+  vann: http://purl.org/vocab/vann/
+mappings:
+  places:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.places[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E53_Place
+    - - rdfs:label
+      - $(name)
+    - - geo:asWKT
+      - $(place_coordinates)
+      - geo:wktLiteral
+    - - heritageGraph:placeType
+      - $(place_type)
+    - - crm:P53i_is_former_or_current_location_of
+      - $(contains_structure)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  calendar_systems:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.calendar_systems[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:CalendarSystem
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:epochDateGregorian
+      - $(epoch_date_gregorian)
+    - - heritageGraph:isPrimaryForTradition
+      - $(is_primary_for_tradition)~iri
+    - - heritageGraph:yearOffsetFromGregorian
+      - $(year_offset_from_gregorian)
+      - xsd:integer
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  syncretic_relationships:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.syncretic_relationships[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:SyncreticRelationship
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - crm:P140_assigned_attribute_to
+      - $(assigned_to_deity)~iri
+    - - crm:P141_assigned
+      - $(assigned_equivalent)~iri
+    - - heritageGraph:syncreticType
+      - $(syncretic_type)
+    - - prov:used
+      - $(used)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:mentionedInSource
+      - $(documented_in_source)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  physical_heritage_things:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.physical_heritage_things[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:PhysicalHeritageThing
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  religious_traditions:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.religious_traditions[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:ReligiousTradition
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  deities:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.deities[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Deity
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:hasReligiousTradition
+      - $(has_religious_tradition)~iri
+    - - crm:P62i_is_depicted_by
+      - $(is_depicted_in)~iri
+    - - heritageGraph:isInvokedInRitual
+      - $(is_invoked_in_ritual)~iri
+    - - heritageGraph:isEnshrinedThroughEvent
+      - $(is_enshrined_through_event)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  architectural_elements:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.architectural_elements[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:ArchitecturalElement
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - crm:P46i_forms_part_of
+      - $(is_component_of)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  persons:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.persons[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E21_Person
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:birthTimespan
+      - $(birth_timespan)~iri
+    - - heritageGraph:deathTimespan
+      - $(death_timespan)~iri
+    - - crm:P107i_is_current_or_former_member_of
+      - $(member_of_group)~iri
+    - - crm:P14i_performed
+      - $(carried_out_activity)~iri
+    - - heritageGraph:institutionalAffiliation
+      - $(institutional_affiliation)
+    - - heritageGraph:expertiseArea
+      - $(expertise_area)
+    - - prov:actedOnBehalfOf
+      - $(acted_on_behalf_of)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  caste_groups:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.caste_groups[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:CasteGroup
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:traditionalRole
+      - $(traditional_role)
+    - - prov:actedOnBehalfOf
+      - $(acted_on_behalf_of)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  guthis:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.guthis[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Guthi
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:guthiType
+      - $(guthi_type)
+    - - heritageGraph:performsRitual
+      - $(performs_ritual)~iri
+    - - crm:P50i_is_current_keeper_of
+      - $(holds_custody_of)~iri
+    - - crm:P107_has_current_or_former_member
+      - $(has_membership)~iri
+    - - prov:actedOnBehalfOf
+      - $(acted_on_behalf_of)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  production_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.production_events[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E12_Production
+    - - rdfs:label
+      - $(name)
+    - - crm:P108_has_produced
+      - $(produced_object)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - crm:P33_used_specific_technique
+      - $(used_technique)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:commissionedBy
+      - $(commissioned_by)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  enshrinement_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.enshrinement_events[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Enshrinement
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:enshrinedDeity
+      - $(enshrined_deity)~iri
+    - - heritageGraph:enshrinedInStructure
+      - $(enshrined_in_structure)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  consecration_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.consecration_events[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Consecration
+    - - rdfs:label
+      - $(name)
+    - - crm:P16_used_specific_object
+      - $(consecrated_object)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:makesDeityPresent
+      - $(makes_deity_present)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  ritual_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.ritual_events[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:RitualEvent
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:ritualType
+      - $(ritual_type)
+    - - crm:P8_took_place_on_or_within
+      - $(ritual_on_structure)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - heritageGraph:hadParticipant
+      - $(had_participant)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:lunarDateTithi
+      - $(lunar_date_tithi)
+    - - heritageGraph:recurrencePattern
+      - $(recurrence_pattern)
+    - - heritageGraph:invokesDeity
+      - $(invokes_deity)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - heritageGraph:performedByGroup
+      - $(performed_by_group)~iri
+    - - crm:P9i_forms_part_of
+      - $(is_part_of_festival)~iri
+    - - heritageGraph:managedByGuthi
+      - $(managed_by_guthi)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - crm:P183_ends_before_the_start_of
+      - $(occurs_before)~iri
+    - - crm:P183i_starts_after_the_end_of
+      - $(occurs_after)~iri
+    - - crm:P125_used_object_of_type
+      - $(used_materials)~iri
+    - - heritageGraph:routePlaces
+      - $(route_places)~iri
+    - - heritageGraph:startPlace
+      - $(start_place)~iri
+    - - heritageGraph:endPlace
+      - $(end_place)~iri
+    - - heritageGraph:routeDescription
+      - $(route_description)
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  festivals:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.festivals[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Festival
+    - - crm:P9_consists_of
+      - $(includes_ritual_event)~iri
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:ritualType
+      - $(ritual_type)
+    - - crm:P8_took_place_on_or_within
+      - $(ritual_on_structure)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - heritageGraph:hadParticipant
+      - $(had_participant)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:lunarDateTithi
+      - $(lunar_date_tithi)
+    - - heritageGraph:recurrencePattern
+      - $(recurrence_pattern)
+    - - heritageGraph:invokesDeity
+      - $(invokes_deity)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - heritageGraph:performedByGroup
+      - $(performed_by_group)~iri
+    - - crm:P9i_forms_part_of
+      - $(is_part_of_festival)~iri
+    - - heritageGraph:managedByGuthi
+      - $(managed_by_guthi)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - crm:P183_ends_before_the_start_of
+      - $(occurs_before)~iri
+    - - crm:P183i_starts_after_the_end_of
+      - $(occurs_after)~iri
+    - - crm:P125_used_object_of_type
+      - $(used_materials)~iri
+    - - heritageGraph:routePlaces
+      - $(route_places)~iri
+    - - heritageGraph:startPlace
+      - $(start_place)~iri
+    - - heritageGraph:endPlace
+      - $(end_place)~iri
+    - - heritageGraph:routeDescription
+      - $(route_description)
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  custody_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.custody_events[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E10_Transfer_of_Custody
+    - - rdfs:label
+      - $(name)
+    - - crm:P30_transferred_custody_of
+      - $(transferred_object)~iri
+    - - crm:P28_custody_surrendered_by
+      - $(transferred_from_actor)~iri
+    - - crm:P29_custody_received_by
+      - $(transferred_to_actor)~iri
+    - - heritageGraph:transferredToGuthi
+      - $(transferred_to_guthi)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  data_sources:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.data_sources[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:DataSource
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:persistentIdentifier
+      - $(datacite_identifier)
+    - - heritageGraph:identifierScheme
+      - $(datacite_identifier_type)
+    - - heritageGraph:sourceCreator
+      - $(datacite_creator)~iri
+    - - heritageGraph:sourcePublisher
+      - $(datacite_publisher)~iri
+    - - heritageGraph:resourceType
+      - $(datacite_resource_type)
+    - - heritageGraph:publicationTimespan
+      - $(publication_timespan)~iri
+    - - heritageGraph:sourceCitation
+      - $(source_citation)
+    - - heritageGraph:sourceUrl
+      - $(source_url)
+    - - schema:inLanguage
+      - $(source_language)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  data_custodians:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.data_custodians[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:DataCustodian
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:custodianType
+      - $(custodian_type)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:actedOnBehalfOf
+      - $(acted_on_behalf_of)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  assertions:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.assertions[*]
+    s: $(id)
+    po:
+    - - a
+      - crminf:I2_Belief
+    - - prov:value
+      - $(assertion_content)
+    - - crminf:J4_that
+      - $(asserts_proposition)~iri
+    - - heritageGraph:assertsAbout
+      - $(asserts_about)~iri
+    - - heritageGraph:confidenceScore
+      - $(confidence_score)
+      - xsd:decimal
+    - - heritageGraph:dataQualityNote
+      - $(data_quality_note)
+    - - heritageGraph:reconciliationStatus
+      - $(reconciliation_status)
+    - - prov:wasRevisionOf
+      - $(supersedes_assertion)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  documentation_activities:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.documentation_activities[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:DocumentationActivity
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:documents
+      - $(documents)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - heritageGraph:usedMethod
+      - $(used_method)
+    - - heritageGraph:usedEquipment
+      - $(used_equipment)
+    - - prov:generated
+      - $(generated)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  information_objects:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.information_objects[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:InformationObject
+    - - rdfs:label
+      - $(name)
+    - - crm:P129_is_about
+      - $(is_about)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - schema:inLanguage
+      - $(source_language)
+    - - heritageGraph:persistentIdentifier
+      - $(datacite_identifier)
+    - - heritageGraph:identifierScheme
+      - $(datacite_identifier_type)
+    - - heritageGraph:sourceCreator
+      - $(datacite_creator)~iri
+    - - heritageGraph:sourcePublisher
+      - $(datacite_publisher)~iri
+    - - heritageGraph:resourceType
+      - $(datacite_resource_type)
+    - - heritageGraph:publicationTimespan
+      - $(publication_timespan)~iri
+    - - heritageGraph:sourceCitation
+      - $(source_citation)
+    - - heritageGraph:sourceUrl
+      - $(source_url)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  human_made_objects:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.human_made_objects[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E22_Human-Made_Object
+    - - rdfs:label
+      - $(name)
+    - - crm:P55_has_current_location
+      - $(has_current_location)~iri
+    - - crm:P108i_was_produced_by
+      - $(was_produced_by_event)~iri
+    - - crm:P34i_was_assessed_by
+      - $(has_condition_assessment)~iri
+    - - heritageGraph:participatesInRitual
+      - $(participates_in_ritual)~iri
+    - - crm:P30i_custody_transferred_through
+      - $(has_custody_event)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  structures:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.structures[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:ArchitecturalStructure
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - crm:P108i_was_produced_by
+      - $(was_produced_by_event)~iri
+    - - crm:P55_has_current_location
+      - $(has_current_location)~iri
+    - - crm:P34i_was_assessed_by
+      - $(has_condition_assessment)~iri
+    - - crm:P46_is_composed_of
+      - $(has_component)~iri
+    - - heritageGraph:hasArchitecturalStyle
+      - $(has_architectural_style)
+    - - heritageGraph:existenceStatus
+      - $(existence_status)
+    - - heritageGraph:lastKnownExistenceDate
+      - $(last_known_existence_date)
+      - xsd:dateTime
+    - - heritageGraph:destructionEvent
+      - $(destruction_event)~iri
+    - - heritageGraph:hypothesizedLocation
+      - $(hypothesized_location)~iri
+    - - heritageGraph:mentionedInSource
+      - $(documented_in_source)~iri
+    - - heritageGraph:managedByGuthi
+      - $(managed_by_guthi)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - heritageGraph:participatesInRitual
+      - $(participates_in_ritual)~iri
+    - - crm:P30i_custody_transferred_through
+      - $(has_custody_event)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  iconographic_objects:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.iconographic_objects[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:IconographicObject
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - crm:P62_depicts
+      - $(depicts_deity)~iri
+    - - crm:P108i_was_produced_by
+      - $(was_produced_by_event)~iri
+    - - heritageGraph:participatesInRitual
+      - $(participates_in_ritual)~iri
+    - - crm:P55_has_current_location
+      - $(has_current_location)~iri
+    - - heritageGraph:usedBy
+      - $(used_by)~iri
+    - - crm:P34i_was_assessed_by
+      - $(has_condition_assessment)~iri
+    - - crm:P30i_custody_transferred_through
+      - $(has_custody_event)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  actors:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.actors[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E39_Actor
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:actedOnBehalfOf
+      - $(acted_on_behalf_of)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  historical_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.historical_events[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:HistoricalEvent
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - heritageGraph:architecturalStructures
+      - $(architectural_structures)~iri
+    - - crm:P9_consists_of
+      - $(includes_ritual_event)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  condition_assessments:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.condition_assessments[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E14_Condition_Assessment
+    - - rdfs:label
+      - $(name)
+    - - crm:P34_concerned
+      - $(assessed_object)~iri
+    - - crm:P35_has_identified
+      - $(assessed_condition_state)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  condition_states:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.condition_states[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E3_Condition_State
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:hasConditionType
+      - $(has_condition_type)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  time_spans:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.time_spans[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E52_Time-Span
+    - - crm:P82a_begin_of_the_begin
+      - $(date_earliest)
+      - xsd:dateTime
+    - - crm:P82b_end_of_the_end
+      - $(date_latest)
+      - xsd:dateTime
+    - - heritageGraph:calendarSystem
+      - $(calendar_system)~iri
+    - - heritageGraph:datePrecision
+      - $(date_precision)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  techniques:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.techniques[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E29_Design_or_Procedure
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  kumari_tenures:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.kumari_tenures[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:KumariTenure
+    - - rdfs:label
+      - $(name)
+    - - heritageGraph:hadParticipant
+      - $(had_participant)~iri
+    - - heritageGraph:embodiedDeity
+      - $(embodied_deity)~iri
+    - - heritageGraph:residenceStructure
+      - $(residence_structure)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:supportedByInstitution
+      - $(supported_by_institution)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:assumesRole
+      - $(assumes_role)~iri
+    - - heritageGraph:selectedThrough
+      - $(selected_through)~iri
+    - - heritageGraph:enthronedThrough
+      - $(enthroned_through)~iri
+    - - heritageGraph:retiredThrough
+      - $(retired_through)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  kumari_roles:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.kumari_roles[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:KumariRole
+    - - heritageGraph:roleDeity
+      - $(role_deity)~iri
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  kumari_lifecycle_events:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.kumari_lifecycle_events[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:KumariLifecycleEvent
+    - - heritageGraph:boundsTenure
+      - $(bounds_tenure)~iri
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:ritualType
+      - $(ritual_type)
+    - - crm:P8_took_place_on_or_within
+      - $(ritual_on_structure)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - heritageGraph:hadParticipant
+      - $(had_participant)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - heritageGraph:lunarDateTithi
+      - $(lunar_date_tithi)
+    - - heritageGraph:recurrencePattern
+      - $(recurrence_pattern)
+    - - heritageGraph:invokesDeity
+      - $(invokes_deity)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - heritageGraph:performedByGroup
+      - $(performed_by_group)~iri
+    - - crm:P9i_forms_part_of
+      - $(is_part_of_festival)~iri
+    - - heritageGraph:managedByGuthi
+      - $(managed_by_guthi)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - crm:P183_ends_before_the_start_of
+      - $(occurs_before)~iri
+    - - crm:P183i_starts_after_the_end_of
+      - $(occurs_after)~iri
+    - - crm:P125_used_object_of_type
+      - $(used_materials)~iri
+    - - heritageGraph:routePlaces
+      - $(route_places)~iri
+    - - heritageGraph:startPlace
+      - $(start_place)~iri
+    - - heritageGraph:endPlace
+      - $(end_place)~iri
+    - - heritageGraph:routeDescription
+      - $(route_description)
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  selection_criteria:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.selection_criteria[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:SelectionCriterion
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  ritual_assessments:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.ritual_assessments[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:RitualAssessment
+    - - heritageGraph:assessesCandidate
+      - $(assesses_candidate)~iri
+    - - heritageGraph:partOfSelection
+      - $(part_of_selection)~iri
+    - - heritageGraph:hasAssertion
+      - $(has_assertion)~iri
+    - - heritageGraph:documentedBy
+      - $(was_documented_by)~iri
+    - - crm:P14_carried_out_by
+      - $(carried_out_by)~iri
+    - - crm:P4_has_time-span
+      - $(has_timespan)~iri
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - heritageGraph:ritualType
+      - $(ritual_type)
+    - - crm:P8_took_place_on_or_within
+      - $(ritual_on_structure)~iri
+    - - crm:P7_took_place_at
+      - $(took_place_at)~iri
+    - - heritageGraph:hadParticipant
+      - $(had_participant)~iri
+    - - heritageGraph:lunarDateTithi
+      - $(lunar_date_tithi)
+    - - heritageGraph:recurrencePattern
+      - $(recurrence_pattern)
+    - - heritageGraph:invokesDeity
+      - $(invokes_deity)~iri
+    - - heritageGraph:performedByGroup
+      - $(performed_by_group)~iri
+    - - crm:P9i_forms_part_of
+      - $(is_part_of_festival)~iri
+    - - heritageGraph:managedByGuthi
+      - $(managed_by_guthi)~iri
+    - - crm:P183_ends_before_the_start_of
+      - $(occurs_before)~iri
+    - - crm:P183i_starts_after_the_end_of
+      - $(occurs_after)~iri
+    - - crm:P125_used_object_of_type
+      - $(used_materials)~iri
+    - - heritageGraph:routePlaces
+      - $(route_places)~iri
+    - - heritageGraph:startPlace
+      - $(start_place)~iri
+    - - heritageGraph:endPlace
+      - $(end_place)~iri
+    - - heritageGraph:routeDescription
+      - $(route_description)
+    - - prov:used
+      - $(used)~iri
+    - - prov:generated
+      - $(generated)~iri
+    - - prov:wasAssociatedWith
+      - $(was_associated_with)~iri
+    - - prov:wasInformedBy
+      - $(was_informed_by)~iri
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - prov:startedAtTime
+      - $(started_at_time)
+      - xsd:dateTime
+    - - prov:endedAtTime
+      - $(ended_at_time)
+      - xsd:dateTime
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  propositions:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.propositions[*]
+    s: $(id)
+    po:
+    - - a
+      - heritageGraph:Proposition
+    - - heritageGraph:propositionSubject
+      - $(proposition_subject)~iri
+    - - heritageGraph:propositionPredicate
+      - $(proposition_predicate)
+      - xsd:anyURI
+    - - heritageGraph:propositionObjectEntity
+      - $(proposition_object_entity)~iri
+    - - heritageGraph:propositionLiteralValue
+      - $(proposition_object_literal)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri
+  materials:
+    sources:
+    - - 02_resolved.json~jsonpath
+      - $.materials[*]
+    s: $(id)
+    po:
+    - - a
+      - crm:E57_Material
+    - - rdfs:label
+      - $(name)
+    - - crm:P3_has_note
+      - $(note)
+    - - prov:wasDerivedFrom
+      - $(was_derived_from)~iri
+    - - prov:wasAttributedTo
+      - $(was_attributed_to)~iri
+    - - prov:wasGeneratedBy
+      - $(was_generated_by)~iri
+    - - prov:generatedAtTime
+      - $(generated_at_time)
+      - xsd:dateTime
+    - - prov:wasInfluencedBy
+      - $(was_influenced_by)~iri
+    - - skos:exactMatch
+      - $(resolution.uri)~iri

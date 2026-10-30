@@ -85,7 +85,64 @@ def apply_overrides(collections, overrides):
                 collections[col]["slots"][name] = rule
 
 
-def generate(schema_path, overrides_path=None):
+YARRRML_HEADER = (
+    "# GENERATED YARRRML mapping by scripts/generate_mapping.py from schemas/HeritageGraph.yaml.\n"
+    "# DO NOT EDIT: see references/mapping-format.md.\n"
+)
+
+DEFAULT_YARRRML_OUT = MAPPINGS_DIR / "heritagegraph.yarrrml.yaml"
+
+
+def generate_yarrrml(schema_path, overrides_path=None):
+    sv = SchemaView(str(schema_path))
+    collections = {}
+    for col, rng in container_collections(sv):
+        collections[col] = {
+            "class": sv.get_uri(sv.get_class(rng), expand=False),
+            "slots": {s.name: slot_rule(sv, s) for s in sv.class_induced_slots(rng)},
+        }
+    overrides = None
+    if overrides_path and Path(overrides_path).exists():
+        overrides = yaml.safe_load(Path(overrides_path).read_text(encoding="utf-8"))
+    apply_overrides(collections, overrides)
+
+    prefixes = {p.prefix_prefix: p.prefix_reference for p in sv.schema.prefixes.values()
+                if p.prefix_prefix != "linkml"}
+    mappings = {}
+    for col, col_cfg in collections.items():
+        po_list = [["a", col_cfg["class"]]]
+        for slot_name, srule in col_cfg["slots"].items():
+            if srule.get("identity"):
+                continue
+            p = srule["p"]
+            ref = srule.get("ref", False)
+            dt = srule.get("datatype")
+            if ref:
+                po_list.append([p, f"$({slot_name})~iri"])
+            elif dt:
+                po_list.append([p, f"$({slot_name})", dt])
+            else:
+                po_list.append([p, f"$({slot_name})"])
+        # Support Stage 2 resolution projection (Ticket 2)
+        po_list.append(["skos:exactMatch", "$(resolution.uri)~iri"])
+
+        mappings[col] = {
+            "sources": [["02_resolved.json~jsonpath", f"$.{col}[*]"]],
+            "s": "$(id)",
+            "po": po_list,
+        }
+
+    doc = {
+        "prefixes": prefixes,
+        "mappings": mappings,
+    }
+    body = yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=120)
+    return (YARRRML_HEADER + body).encode("utf-8")
+
+
+def generate(schema_path, overrides_path=None, fmt="native"):
+    if fmt == "yarrrml":
+        return generate_yarrrml(schema_path, overrides_path)
     sv = SchemaView(str(schema_path))
     collections = {}
     for col, rng in container_collections(sv):
@@ -117,13 +174,15 @@ def main():
     ap = argparse.ArgumentParser(description="Generate the HeritageGraph Stage 3 mapping from the LinkML schema.")
     ap.add_argument("--schema", default=str(DEFAULT_SCHEMA))
     ap.add_argument("--overrides", default=None, help="Overrides YAML (default: heritagegraph.overrides.yaml next to --out)")
-    ap.add_argument("--out", default=str(DEFAULT_OUT))
+    ap.add_argument("--format", choices=["native", "yarrrml"], default="native", help="Mapping output format (default: native)")
+    ap.add_argument("--out", default=None, help="Output file path (default depends on --format)")
     ap.add_argument("--check", action="store_true", help="Exit 1 if --out is missing or stale; write nothing")
     args = ap.parse_args()
 
-    out = Path(args.out)
+    default_out = DEFAULT_YARRRML_OUT if args.format == "yarrrml" else DEFAULT_OUT
+    out = Path(args.out) if args.out else default_out
     overrides = Path(args.overrides) if args.overrides else out.parent / "heritagegraph.overrides.yaml"
-    content = generate(args.schema, overrides)
+    content = generate(args.schema, overrides, fmt=args.format)
 
     if args.check:
         if out.exists() and out.read_bytes().replace(b"\r\n", b"\n") == content:

@@ -72,3 +72,7 @@ collections:
 ```
 
 Re-run `generate_mapping.py` after editing. `generate_mapping.py --check` exits 1 when the committed mapping no longer matches the schema and overrides.
+
+## YARRRML / RML Interoperability
+
+While Stage 3 natively executes `heritagegraph.yaml` via pure-Python RDFLib for zero runtime dependencies, `generate_mapping.py` also supports exporting standardized [YARRRML](https://rml.io/yarrrml/) rules (`--format yarrrml`). This allows external tools (such as `morph-kgc` or `rmlmapper`) to execute mappings in standard W3C RML pipelines directly against `02_resolved.json`. See [ADR-0005: YARRRML / RML Interoperability and Pipeline Triplification Boundary](../../../docs/adr/0005-yarrrml-rml-interoperability-and-pipeline-boundary.md).
