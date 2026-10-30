@@ -12,6 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STAGE3_DIR = REPO_ROOT / "skills" / "03_heritage-rdf-mapper" / "scripts"
 SCHEMA = REPO_ROOT / "schemas" / "HeritageGraph.yaml"
 COMMITTED = REPO_ROOT / "skills" / "03_heritage-rdf-mapper" / "assets" / "mappings" / "heritagegraph.yaml"
+COMMITTED_YARRRML = REPO_ROOT / "skills" / "03_heritage-rdf-mapper" / "assets" / "mappings" / "heritagegraph.yarrrml.yaml"
 
 if str(STAGE3_DIR) not in sys.path:
     sys.path.insert(0, str(STAGE3_DIR))
@@ -88,6 +89,10 @@ def test_committed_mapping_is_fresh():
     assert run_gen("--schema", SCHEMA, "--out", COMMITTED, "--check") == 0
 
 
+def test_committed_yarrrml_mapping_is_fresh():
+    assert run_gen("--schema", SCHEMA, "--out", COMMITTED_YARRRML, "--format", "yarrrml", "--check") == 0
+
+
 def test_header_records_schema_version_and_checksum(mapping):
     assert mapping["generated_from"]["schema_version"] == SchemaView(str(SCHEMA)).schema.version
     assert mapping["generated_from"]["sha256"] == hashlib.sha256(SCHEMA.read_bytes()).hexdigest()
@@ -98,6 +103,23 @@ def test_stale_mapping_is_detected(generated, tmp_path):
     shutil.copy(SCHEMA, changed)
     changed.write_text(changed.read_text(encoding="utf-8") + "\n# touched\n", encoding="utf-8")
     assert run_gen("--schema", changed, "--out", generated, "--check") == 1
+
+
+def test_generate_yarrrml_format(tmp_path):
+    out = tmp_path / "heritagegraph.yarrrml.yaml"
+    assert run_gen("--schema", SCHEMA, "--out", out, "--format", "yarrrml") == 0
+    assert out.exists()
+    doc = yaml.safe_load(out.read_text(encoding="utf-8"))
+    assert "prefixes" in doc
+    assert "mappings" in doc
+    assert "structures" in doc["mappings"]
+    struct_map = doc["mappings"]["structures"]
+    assert "sources" in struct_map
+    assert "s" in struct_map
+    assert "po" in struct_map
+    # Check that rdf:type ArchitecturalStructure is in po
+    assert any(po[0] in ("a", "rdf:type") and "ArchitecturalStructure" in str(po[1]) for po in struct_map["po"])
+
 
 
 def test_overrides_can_change_or_suppress_rules(tmp_path):

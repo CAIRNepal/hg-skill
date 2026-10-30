@@ -20,6 +20,7 @@ Output: `graph.ttl`, typed with `heritageGraph:` classes and properties.
    Default: `assets/mappings/heritagegraph.yaml`, **generated** from `schemas/HeritageGraph.yaml` (each Container collection maps to its class, each slot to its `slot_uri`). After an ontology update (`python scripts/update_ontology.py --ref <ref>`), regenerate:
    ```bash
    python scripts/generate_mapping.py          # add --check to detect a stale mapping
+   python scripts/generate_mapping.py --format yarrrml # export W3C YARRRML mapping
    ```
    Exceptions live in `assets/mappings/heritagegraph.overrides.yaml` (replace or suppress a slot rule, or change a class). Alternate: `assets/mappings/cidoc-crm.yaml` (record-based, CRM-typed output; validate with `--allow-crm-only`).
    *(Mapping syntax: [references/mapping-format.md](references/mapping-format.md))*.
