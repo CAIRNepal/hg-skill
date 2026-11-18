@@ -4,7 +4,7 @@
 name: heritagegraph
 generated_from:
   schema_version: 1.0.1
-  sha256: b8e303e89f770c0b5d82e41f22aa8e7ce186d8bdfd310052354daec12de1082a
+  sha256: 565d3bf356d4b4413265671991a903ea0cd765b23aebba7e09505960187af28e
 prefixes:
   heritageGraph: https://cair-nepal.org/heritagegraph/
   rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#

@@ -1,0 +1,40 @@
+name: Contributions & Quality Gate CI
+
+on:
+  push:
+    branches:
+      - main
+      - "integration/**"
+  pull_request:
+    branches:
+      - main
+      - "integration/**"
+  workflow_dispatch:
+
+jobs:
+  validate-contributions:
+    name: Run Quality Gates & Golden Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyoxigraph rdflib pyshacl requests linkml pytest
+
+      - name: Run Environment Diagnostics (hg doctor)
+        run: |
+          python -m hg.cli doctor --no-network
+
+      - name: Execute Full Test Suite
+        run: |
+          pytest tests/ -v --durations=10
