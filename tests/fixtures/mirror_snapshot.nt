@@ -1,0 +1,4 @@
+<https://cair-nepal.org/heritagegraph/struct-krishna-mandir> <http://www.w3.org/2000/01/rdf-schema#label> "Krishna Mandir" .
+<https://cair-nepal.org/heritagegraph/struct-krishna-mandir> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://cair-nepal.org/heritagegraph/Monument> .
+<https://cair-nepal.org/heritagegraph/place-patan> <http://www.w3.org/2000/01/rdf-schema#label> "Patan" .
+<https://cair-nepal.org/heritagegraph/place-patan> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://cair-nepal.org/heritagegraph/Place> .

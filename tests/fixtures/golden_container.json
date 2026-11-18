@@ -1,0 +1,25 @@
+{
+  "id": "heritageGraph:batch-golden-fixture-01",
+  "places": [
+    {
+      "id": "heritageGraph:place-patan",
+      "name": "Patan",
+      "sensitivity": "public"
+    }
+  ],
+  "structures": [
+    {
+      "id": "heritageGraph:struct-krishna-mandir",
+      "name": "कृष्ण मन्दिर (Krishna Mandir)",
+      "note": "Stone temple in Patan Durbar Square",
+      "existence_status": "Extant",
+      "has_current_location": "heritageGraph:place-patan",
+      "sensitivity": "public",
+      "license": "CC-BY-4.0",
+      "evidence_span": {
+        "page_number": 1,
+        "paragraph_span": [1, 2]
+      }
+    }
+  ]
+}
