@@ -78,6 +78,9 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
                 "page_range": ch.get("page_range"),
                 "text": ch["text"],
                 "word_count": ch["word_count"],
+                "evidence_span": ch.get("evidence_span"),
+                "sensitivity": ch.get("sensitivity", "public"),
+                "license": ch.get("license", "CC-BY-4.0"),
                 "heritage_tags": tags
             })
 
@@ -105,8 +108,19 @@ def process_raw_file(file_path: Path, max_words_per_chunk: int = 800) -> dict:
     total_eras = sum(len(it.get("heritage_tags", {}).get("eras", [])) for it in items)
     total_traditions = sum(len(it.get("heritage_tags", {}).get("traditions", [])) for it in items)
 
+    total_evidence = sum(1 for it in items if it.get("evidence_span"))
+    breakdown = {
+        "public": sum(1 for it in items if it.get("sensitivity", "public") == "public"),
+        "restricted-sacred": sum(1 for it in items if it.get("sensitivity") == "restricted-sacred"),
+        "guthi-internal": sum(1 for it in items if it.get("sensitivity") == "guthi-internal"),
+    }
+    has_restricted = (breakdown["restricted-sacred"] > 0 or breakdown["guthi-internal"] > 0)
+
     summary = {
         "total_items": len(items),
+        "evidence_spans_count": total_evidence,
+        "sensitivity_breakdown": breakdown,
+        "restricted_distribution": has_restricted,
         "discovered_guthis": total_guthis,
         "discovered_architectural_styles": total_styles,
         "discovered_calendar_dates": total_dates,
@@ -176,6 +190,7 @@ def main():
         target_out.parent.mkdir(parents=True, exist_ok=True)
         target_out.write_text(serialized, encoding="utf-8")
         if ws:
+            ws.record_evidence_and_rights(payload["items"], stage_idx=0)
             ws.record_stage_finish(0, "ingest", status="success", metrics=summ)
             print(f"Pipeline run directory: {ws.run_dir}")
         print(summary_msg)

@@ -14,7 +14,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNS_DIR = REPO_ROOT / "runs"
@@ -244,8 +244,80 @@ class RunWorkspace:
         if error:
             stage_data["error"] = error
 
+        if metrics:
+            if "evidence_spans_count" in metrics:
+                m.setdefault("summary", {})["evidence_spans_count"] = metrics["evidence_spans_count"]
+                m["evidence_spans_count"] = metrics["evidence_spans_count"]
+            if "sensitivity_breakdown" in metrics:
+                m.setdefault("summary", {})["sensitivity_breakdown"] = metrics["sensitivity_breakdown"]
+                m["sensitivity_breakdown"] = metrics["sensitivity_breakdown"]
+            if "restricted_distribution" in metrics:
+                m.setdefault("summary", {})["restricted_distribution"] = metrics["restricted_distribution"]
+                m["restricted_distribution"] = metrics["restricted_distribution"]
+
         m.setdefault("stages", {})[key] = stage_data
         self.save_manifest(m)
+
+    def record_evidence_and_rights(
+        self,
+        items_or_summary: Union[List[Dict[str, Any]], Dict[str, Any]],
+        stage_idx: int = 1,
+    ) -> Dict[str, Any]:
+        """Record evidence spans count and sensitivity breakdown into manifest.json.
+
+        Flags runs with restricted-sacred or guthi-internal content for restricted distribution.
+        """
+        m = self.load_manifest()
+
+        if isinstance(items_or_summary, list):
+            items = items_or_summary
+            spans_count = sum(1 for it in items if it.get("evidence_span"))
+            breakdown = {
+                "public": sum(1 for it in items if it.get("sensitivity", "public") == "public"),
+                "restricted-sacred": sum(1 for it in items if it.get("sensitivity") == "restricted-sacred"),
+                "guthi-internal": sum(1 for it in items if it.get("sensitivity") == "guthi-internal"),
+            }
+            has_restricted = (
+                breakdown["restricted-sacred"] > 0 or breakdown["guthi-internal"] > 0
+            )
+        elif isinstance(items_or_summary, dict):
+            spans_count = items_or_summary.get(
+                "evidence_spans_count",
+                items_or_summary.get("total_evidence_spans", 0),
+            )
+            breakdown = items_or_summary.get(
+                "sensitivity_breakdown",
+                {
+                    "public": items_or_summary.get("public", 0),
+                    "restricted-sacred": items_or_summary.get("restricted-sacred", 0),
+                    "guthi-internal": items_or_summary.get("guthi-internal", 0),
+                },
+            )
+            has_restricted = items_or_summary.get(
+                "restricted_distribution",
+                (breakdown.get("restricted-sacred", 0) > 0 or breakdown.get("guthi-internal", 0) > 0),
+            )
+        else:
+            raise TypeError("items_or_summary must be a list of records or a summary dict")
+
+        summary_data = {
+            "evidence_spans_count": spans_count,
+            "sensitivity_breakdown": breakdown,
+            "restricted_distribution": has_restricted,
+        }
+
+        m.setdefault("summary", {}).update(summary_data)
+        m["evidence_spans_count"] = spans_count
+        m["sensitivity_breakdown"] = breakdown
+        m["restricted_distribution"] = has_restricted
+
+        stage_name = STAGE_NAMES.get(stage_idx, f"stage_{stage_idx:02d}")
+        key = f"stage_{stage_idx:02d}_{stage_name}"
+        if key in m.get("stages", {}):
+            m["stages"][key].setdefault("metrics", {}).update(summary_data)
+
+        self.save_manifest(m)
+        return summary_data
 
     def finalize(
         self, status: str = "completed", summary: Optional[Dict[str, Any]] = None
@@ -256,4 +328,7 @@ class RunWorkspace:
         m["completed_at"] = datetime.now(timezone.utc).isoformat()
         if summary:
             m.setdefault("summary", {}).update(summary)
+            for k in ("evidence_spans_count", "sensitivity_breakdown", "restricted_distribution"):
+                if k in summary:
+                    m[k] = summary[k]
         self.save_manifest(m)
