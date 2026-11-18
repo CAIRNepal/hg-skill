@@ -19,8 +19,9 @@ from typing import Any, Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMMON_DIR = REPO_ROOT / "skills" / "common"
 SCRIPTS_DIR = Path(__file__).resolve().parent
+SRC_DIR = REPO_ROOT / "src"
 
-for d in (COMMON_DIR, SCRIPTS_DIR):
+for d in (COMMON_DIR, SCRIPTS_DIR, SRC_DIR):
     if str(d) not in sys.path:
         sys.path.insert(0, str(d))
 
@@ -28,6 +29,11 @@ try:
     from run_workspace import RunWorkspace
 except ImportError:
     RunWorkspace = None
+
+try:
+    from hg.mirror import OxigraphMirror, load_mirror
+except ImportError:
+    from lookup_mirror import OxigraphMirror, load_mirror
 
 from gazetteer_match import fold, load_gazetteers
 
@@ -53,10 +59,30 @@ def fetch_candidates(
     gazetteers_dir: Optional[Path] = None,
     query_network: bool = True,
     limit: int = 5,
+    mirror: Optional[Any] = None,
 ) -> List[Dict[str, Any]]:
-    """Fetch and deduplicate candidate URIs from gazetteers, Wikidata, and Getty."""
+    """Fetch and deduplicate candidate URIs from mirror, gazetteers, Wikidata, and Getty."""
     candidates = []
     seen_uris = set()
+
+    # 0. Check local Oxigraph KG mirror
+    if mirror is not None:
+        try:
+            mirror_cands = mirror.find_candidate_entities(label=label, entity_type=kind, limit=limit)
+            for mc in mirror_cands:
+                uri = mc["uri"]
+                if uri not in seen_uris:
+                    candidates.append({
+                        "uri": uri,
+                        "label": mc.get("label", label),
+                        "source": mc.get("source", "kg_mirror"),
+                        "description": f"Local KG mirror match ({mc.get('match_type', 'exact')})",
+                        "confidence": mc.get("score", 0.95),
+                        "match_type": mc.get("match_type", "close"),
+                    })
+                    seen_uris.add(uri)
+        except Exception:
+            pass
 
     # 1. Check local gazetteers
     if gazetteers_dir and gazetteers_dir.exists():
@@ -142,6 +168,7 @@ def resolve_container_entities(
     gazetteers_dir: Optional[Path] = None,
     base_uri: str = "https://cair-nepal.org/heritagegraph/",
     query_network: bool = True,
+    mirror: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Attach resolutions to all entities and compile review queue items for unlinked ones."""
     index = load_gazetteers(gazetteers_dir) if gazetteers_dir and gazetteers_dir.exists() else {}
@@ -169,7 +196,86 @@ def resolve_container_entities(
             label = item.get("name") or item.get("label") or item.get("id", "")
             folded_label = fold(label)
             context = str(item.get("note") or item.get("description") or "")
+            item_id = str(item.get("id") or "")
+            item_uri = str(item.get("uri") or "")
 
+            resolved = False
+
+            # Precedence 1: Local Oxigraph Mirror
+            if mirror is not None:
+                # 1A. Exact URI match: direct reuse
+                target_check_uri = (
+                    item_uri if (item_uri and mirror.check_exact_uri(item_uri))
+                    else (item_id if (item_id and mirror.check_exact_uri(item_id)) else None)
+                )
+                if target_check_uri:
+                    canonical_uri = mirror.get_canonical_uri(target_check_uri)
+                    item["resolution"] = {
+                        "uri": canonical_uri,
+                        "source": "kg_mirror",
+                        "confidence": 1.0,
+                        "status": "linked",
+                        "match_type": "exact",
+                        "rationale": f"Exact URI match in local KG mirror for '{target_check_uri}'"
+                    }
+                    counts["linked"] += 1
+                    resolved = True
+                else:
+                    # 1B. Confident label/type match in mirror
+                    mirror_cands = mirror.find_candidate_entities(label=label, entity_type=default_kind, limit=5)
+                    exact_matches = [c for c in mirror_cands if c.get("match_type") == "exact"]
+                    if len(exact_matches) == 1:
+                        cand = exact_matches[0]
+                        item["resolution"] = {
+                            "uri": cand["uri"],
+                            "source": "kg_mirror",
+                            "confidence": cand.get("score", 1.0),
+                            "status": "linked",
+                            "match_type": "exact",
+                            "rationale": f"Mirror resolution for '{label}' to existing entity {cand['uri']}"
+                        }
+                        counts["linked"] += 1
+                        resolved = True
+                    elif mirror_cands:
+                        # 1C. Ambiguous/near match -> flag in 02_review_queue.json
+                        slug = slugify(label)
+                        local_uri = f"{base}{default_kind}/{slug}"
+                        item["resolution"] = {
+                            "uri": local_uri,
+                            "source": "local-mint",
+                            "confidence": 1.0,
+                            "status": "local",
+                            "rationale": f"Ambiguous mirror candidates for '{label}', staged for human review"
+                        }
+                        counts["local"] += 1
+                        fetch_kwargs = {
+                            "label": label,
+                            "kind": default_kind,
+                            "context": context,
+                            "gazetteers_dir": gazetteers_dir,
+                            "query_network": query_network,
+                        }
+                        if mirror is not None:
+                            fetch_kwargs["mirror"] = mirror
+
+                        candidates = fetch_candidates(**fetch_kwargs)
+
+                        review_queue.append({
+                            "id": item.get("id"),
+                            "collection": col,
+                            "label": label,
+                            "kind": default_kind,
+                            "context": context,
+                            "current_uri": local_uri,
+                            "status": "local",
+                            "candidates": candidates
+                        })
+                        resolved = True
+
+            if resolved:
+                continue
+
+            # Precedence 2: Curated Gazetteer
             hits = index.get(folded_label, [])
             same_kind = [h for h in hits if not h.get("kind") or h["kind"] == default_kind]
 
@@ -184,7 +290,7 @@ def resolve_container_entities(
                 }
                 counts["linked"] += 1
             else:
-                # Mint predictable local URI
+                # Precedence 4 & 5: Fallback Minting + Review Queue
                 slug = slugify(label)
                 local_uri = f"{base}{default_kind}/{slug}"
                 item["resolution"] = {
@@ -197,13 +303,17 @@ def resolve_container_entities(
                 counts["local"] += 1
 
                 # Compile candidate options for human review
-                candidates = fetch_candidates(
-                    label=label,
-                    kind=default_kind,
-                    context=context,
-                    gazetteers_dir=gazetteers_dir,
-                    query_network=query_network,
-                )
+                fetch_kwargs = {
+                    "label": label,
+                    "kind": default_kind,
+                    "context": context,
+                    "gazetteers_dir": gazetteers_dir,
+                    "query_network": query_network,
+                }
+                if mirror is not None:
+                    fetch_kwargs["mirror"] = mirror
+
+                candidates = fetch_candidates(**fetch_kwargs)
 
                 review_queue.append({
                     "id": item.get("id"),
@@ -342,11 +452,12 @@ def interactive_review_session(
         # Apply choice to resolved data
         target_entity = id_map.get(item["id"])
         if target_entity:
+            is_linked = "cair-nepal.org" not in selected_uri or "kg_mirror" in selected_source
             target_entity["resolution"] = {
                 "uri": selected_uri,
                 "source": selected_source,
                 "confidence": 1.0,
-                "status": "linked" if "cair-nepal.org" not in selected_uri else "local",
+                "status": "linked" if is_linked else "local",
                 "match_type": selected_match_type,
                 "rationale": f"Verified by human curator for '{item['label']}'",
             }
@@ -381,16 +492,17 @@ def interactive_review_session(
     }
 
 
-def main():
+def main(argv: Optional[List[str]] = None):
     ap = argparse.ArgumentParser(description="Resolve entities from extracted.json into resolved.json with HITL review.")
     ap.add_argument("extracted", nargs="?", default=None, help="Path to extracted.json file or run directory")
     ap.add_argument("--run-dir", default=None, help="Pipeline run directory")
     ap.add_argument("--interactive", "-i", action="store_true", help="Launch interactive human review prompt")
     ap.add_argument("--gazetteers", default=None, help="Path to gazetteers directory")
+    ap.add_argument("--mirror", default=None, help="Path to local KG mirror snapshot (.nt/.ttl) or store directory")
     ap.add_argument("--out", default=None, help="Path to write resolved.json")
     ap.add_argument("--base", default="https://cair-nepal.org/heritagegraph/")
     ap.add_argument("--no-network", action="store_true", help="Disable external network queries for candidates")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     ws = None
     extracted_path = None
@@ -431,11 +543,23 @@ def main():
         print(f"Error: Input file not found: {extracted_path}", file=sys.stderr)
         return 1
 
+    mirror = None
+    if args.mirror:
+        try:
+            mirror = OxigraphMirror(args.mirror)
+        except Exception as exc:
+            print(f"Error loading Oxigraph mirror from {args.mirror}: {exc}", file=sys.stderr)
+            return 1
+
     if ws:
-        ws.record_stage_start(
-            2, "resolve",
-            {"input": str(extracted_path), "interactive": args.interactive, "gazetteers": str(gazetteers_dir)}
-        )
+        stage_meta = {
+            "input": str(extracted_path),
+            "interactive": args.interactive,
+            "gazetteers": str(gazetteers_dir),
+        }
+        if args.mirror:
+            stage_meta["mirror"] = str(args.mirror)
+        ws.record_stage_start(2, "resolve", stage_meta)
 
     with open(extracted_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -445,6 +569,7 @@ def main():
         gazetteers_dir=gazetteers_dir,
         base_uri=args.base,
         query_network=not args.no_network,
+        mirror=mirror,
     )
     resolved_data = result["data"]
     counts = result["counts"]
